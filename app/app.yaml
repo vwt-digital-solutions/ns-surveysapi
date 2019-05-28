@@ -7,7 +7,3 @@ runtime_config:
 
 env_variables:
   BUCKET: "vwt-d-gew1-ns-surveys-registrations-stg"
-
-endpoints_api_service:
-  name: vwt-d-gew1-ns-surveys.appspot.com
-  rollout_strategy: managed
