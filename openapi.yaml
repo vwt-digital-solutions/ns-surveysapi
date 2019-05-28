@@ -1,4 +1,4 @@
-swagger: '2.0'
+swagger: "2.0"
 info:
   title: Surveys API
   description: Download A CSV file
@@ -7,34 +7,33 @@ info:
     email: info@vwt.digital
   license:
     name: GNU GPLv3
-    url: 'https://www.gnu.org/licenses/gpl.txt'
+    url: "https://www.gnu.org/licenses/gpl.txt"
   version: 1.0.0
-host: 'vwt-d-gew1-ns-surveys.appspot.com'
+host: "vwt-d-gew1-ns-surveys.appspot.com"
 paths:
   /get_surveys:
     get:
       summary: Retrieve a csv file
       description: Get ready registrations
       operationId: get_survey_as_csv
+      security:
+        - Surveys: [surveys.download]
       responses:
         '200':
-          description: 'Download Success: OK'
+          description: Download Success
           schema:
             type: string
-#      security:
-#        -
-#          Surveys:
-#            - surveys.download
-#securityDefinitions:
-#  Surveys:
-#    type: oauth2
-#    description: 'OAuth2 security'
-#    flow: accessCode
-#    authorizationUrl: 'https://login.microsoftonline.com/be36ab0a-ee39-47de-9356-a8a501a9c832/oauth2/v2.0/authorize'
-#    tokenUrl: 'https://login.microsoftonline.com/be36ab0a-ee39-47de-9356-a8a501a9c832/oauth2/v2.0/token'
-#    scopes:
-#      download:surveys: Grant Download Access
-#security:
-#  -
-#    Surveys:
-#      - surveys.download
+        401:
+          description: Not authenticated
+        403:
+          description: Access token does not have the required scope
+        
+securityDefinitions:
+  Surveys:
+    type: oauth2
+    description: 'OAuth2 security'
+    flow: implicit
+    authorizationUrl: 'https://login.microsoftonline.com/be36ab0a-ee39-47de-9356-a8a501a9c832/oauth2/v2.0/authorize'
+    tokenUrl: 'https://login.microsoftonline.com/be36ab0a-ee39-47de-9356-a8a501a9c832/oauth2/v2.0/token'
+    scopes:
+      download:surveys: Grant Download Access
