@@ -4,8 +4,7 @@ steps:
   - 'bash'
   - '-c'
   - |
-    cp ../config/${PROJECT_ID}/config.py .
-  dir: 'app'
+    cp config/${PROJECT_ID}/config.py app
 
 - name: 'gcr.io/cloud-builders/gcloud'
   entrypoint: 'bash'
