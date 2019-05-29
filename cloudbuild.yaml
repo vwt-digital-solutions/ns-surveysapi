@@ -10,7 +10,7 @@ steps:
   entrypoint: 'bash'
   args:
   - '-c'
-  - 'gcloud app create --region=europe-west1'
+  - 'gcloud app create --region=europe-west1 || exit 0'
 
 - name: 'gcr.io/cloud-builders/gcloud'
   args:
