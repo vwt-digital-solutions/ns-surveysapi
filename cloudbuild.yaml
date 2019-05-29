@@ -1,23 +1,12 @@
 steps:
-- name: 'gcr.io/cloud-builders/gcloud'
-  entrypoint: 'bash'
+- name: 'ubuntu'
   args:
+  - 'bash'
   - '-c'
   - |
-    curl https://vwt-digital.github.io/project-company-data.github.io/gcp-templates/deploy_data_catalog.sh | bash /dev/stdin $PROJECT_ID-dcat-deploy config/${PROJECT_ID}/data_catalog.json $PROJECT_ID
+    cp ../config/${PROJECT_ID}/config.py .
+dir: 'app'
 
-- name: 'gcr.io/cloud-builders/git'
-  args:
-  - 'clone'
-  - '--branch=${BRANCH_NAME}'
-  - 'https://github.com/vwt-digital/ns-surveysapi.git'
-
-- name: 'gcr.io/cloud-builders/gcloud'
-  entrypoint: 'bash'
-  args:
-  - '-c'
-  - 'gcloud endpoints services deploy openapi.yaml'
-  
 - name: 'gcr.io/cloud-builders/gcloud'
   entrypoint: 'bash'
   args:
@@ -29,5 +18,3 @@ steps:
   - 'gcloud app'
   - 'deploy'
   dir: 'app'
-
-
