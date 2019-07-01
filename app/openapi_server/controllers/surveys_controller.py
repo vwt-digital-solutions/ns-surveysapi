@@ -80,8 +80,16 @@ class Registration:
         """
         self.get_registrations(prefix=survey_id)
         registration_list = {}
-        for item in self.registrations:
-            registration_list[self.registrations[item]['info']['formId']] = [key for key in self.registrations.keys()]
+        for key in self.registrations:
+            registration_list[self.registrations[key]['info']['formId']] = \
+                [dict(serial_number=k,
+                      date_of_registration=int(v['meta']['registrationDate']),
+                      site_location=v['data']['tMNLLocationID']['CITY'] if 'tMNLLocationID' in v[
+                          'data'].keys() else '',
+                      site_id=v['data']['siteID'] if 'siteID' in v['data'].keys() else
+                      ''.join(n for n in v['info']['formName'] if n.isdigit())
+                      ) for k, v in self.registrations.items()]
+
         self.registration_list = registration_list
         return json.dumps(registration_list)
 
@@ -97,7 +105,7 @@ class Registration:
         blobs = bucket.list_blobs(prefix=f'attachments/{survey_id}/{registration_id if registration_id else ""}')
         images = {}
         for blob in blobs:
-            images[blob.name] = blob.content_type #Future: Other detail neccessary for front end i.v.m type
+            images[blob.name] = blob.content_type  # Future: Other detail neccessary for front end i.v.m type
 
         try:
             if images:
@@ -192,12 +200,11 @@ class Registration:
         for key, value in forms_list.items():
             forms[key] = []
             for form in value:
-                forms[key].append({
-                    'survey_id': form['properties']['view_id'],
-                    'name': form['properties']['label_text'],
-                    'has_images': form['properties']['view_id'] in self.registrations_with_images
-
-                })
+                forms[key].append(dict(survey_id=form['properties']['view_id'], name=form['properties']['label_text'],
+                                       has_images=form['properties']['view_id'] in self.registrations_with_images,
+                                       description_text=
+                                       form['properties']['description_text']
+                                       if 'description_text' in form['properties'].keys() else ''))
         return json.dumps(forms)
 
 
