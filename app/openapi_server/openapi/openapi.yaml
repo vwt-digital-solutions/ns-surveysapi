@@ -37,7 +37,6 @@ paths:
         '404':
           description: Download Failed
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-  
   /surveys/{survey_id}/registrations/{registration_id}/images/archives:
     get:
       summary: Download a single of registrations image folder as a zip archive
@@ -59,7 +58,6 @@ paths:
           description: Download Failed
           
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-  
   /surveys/{survey_id}/registrations/csvfiles:
     get:
       summary: Retrieve a csv file
@@ -81,7 +79,6 @@ paths:
         '403':
           description: Access token does not have the required scope
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-  
   /surveys/{survey_id}/registrations/archives:
     get:
       summary: Retrieve a zip file
@@ -103,7 +100,6 @@ paths:
         '403':
           description: Access token does not have the required scope
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-  
   /surveys/{survey_id}/registrations:
     get:
       summary: Get a list of available registrations
@@ -126,7 +122,6 @@ paths:
           description: List Not Accessed
           
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-
   /surveys:
     get:
       description: Get all forms available
@@ -145,7 +140,6 @@ paths:
         '404':
           description: List Not Accessed
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-
 components:
   schemas:
     zipFile:
@@ -156,7 +150,6 @@ components:
       example: |-
         Name,Age,Location
         John Doe,103,Venus
-
   parameters:
     storagePrefix:
       name: survey_id
@@ -181,7 +174,6 @@ components:
       required: true
       schema:
         type: integer
-  
   securitySchemes:
     Surveys:
       type: oauth2
@@ -194,6 +186,5 @@ components:
             https://login.microsoftonline.com/be36ab0a-ee39-47de-9356-a8a501a9c832/oauth2/v2.0/token
           scopes:
             surveys.read: Grant Download Access
-            
       x-tokenInfoFunc: openapi_server.controllers.security_controller_.info_from_OAuth2AzureAD
       x-scopeValidateFunc: connexion.decorators.security.validate_scope
