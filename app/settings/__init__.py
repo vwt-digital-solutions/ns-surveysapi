@@ -1,3 +1,4 @@
+import itertools
 import os
 import logging
 import re
@@ -86,7 +87,7 @@ def create_csv_file(surveys):
     return df.to_csv()
 
 
-def flatten_dict_or_create_subforms(value, reference, survey, list_of_subforms):
+def create_subforms(value, reference, survey, list_of_subforms):
     """
     Flattens a dictionary object OR creates a subform with (nested) list values. For example:
     a_registration:  another_list_registration: {
@@ -94,39 +95,93 @@ def flatten_dict_or_create_subforms(value, reference, survey, list_of_subforms):
                     }
 
     => This in a separate CSV { a_registration.another_list_registration._tt667dsfs.x.y: 'fs56df64sd3' }
+    :param list_of_subforms:
+    :param survey:
     :param reference:
     :param value:
     :return:
     """
-    flat = dict()
+
+    file_rw_ready = OrderedDict()
+    header_rows_catalogue = {}
     for key, value in value.items():
         if isinstance(value, list):
-            torn = OrderedDict()
-            for index, x in enumerate(value):
-                torn[f"items__{index}"] = pd.io.json.json_normalize(x, sep=".").to_dict(
-                    orient="records"
-                )[0]
+            if value.__len__() > 0:
+                for index, item in enumerate(value):
+                    if isinstance(item, str):
+                        file_rw_ready[key] = item
+                    else:
+                        file_rw_ready[f"{index}_{key}"] = pd.io.json.json_normalize(item, sep=".").to_dict(
+                            orient="records")[0]
+            else:
+                file_rw_ready[key] = ''
 
-            field_names = [list(torn[name].keys()) for name in list(torn.keys())]
-            fields = ['serialNumber', *field_names[0]]
-
-            subformsfile = open(f"{gettempdir()}/{reference}.csv", "a") if reference in list_of_subforms else \
-                                                         open(f"{gettempdir()}/{reference}.csv", "w")
-            writer = csv.DictWriter(subformsfile, fieldnames=fields)
-
-            if reference not in list_of_subforms:
-                writer.writeheader()
-                list_of_subforms.append(reference)
-
-            # TODO => Hij gaat hier 6 keer doorheen - ik heb niet genoed tijd gehad om dit te lossen
-            for item in torn:
-                ordered = OrderedDict(torn[item])
-                ordered.update({'serialNumber': survey})
-                writer.writerow(ordered)
-            subformsfile.close()
         else:
-            flat[key] = value
-    return flat
+            file_rw_ready.update({key: value})
+
+    file_rw_ready = pd.io.json.json_normalize(file_rw_ready).to_dict(orient='records')[0]
+    field_names = list(file_rw_ready.keys())
+
+    # Serial number on first column
+    fields = ['serialNumber', *field_names]
+    file_rw_ready = {'serialNumber': survey, **file_rw_ready}
+
+    # Add to csv or write a new file
+    sub_forms_file = open(f"{gettempdir()}/{reference}.csv", "a") if reference in list_of_subforms else \
+        open(f"{gettempdir()}/{reference}.csv", "w")
+
+    # Add content to CSV and file to list of sub forms
+    writer = csv.DictWriter(sub_forms_file, fieldnames=fields)
+    if reference not in list_of_subforms:
+        writer.writeheader()
+        list_of_subforms.append(reference)
+
+    # Read header to check headers are the same
+    reader = csv.DictReader(open(f'{gettempdir()}/{reference}.csv'))
+    file_length = [x for x in reader].__len__()
+    if not reader.fieldnames == fields and file_length > 0:
+        # Fields missing in original csv file
+        missing_fields = list(itertools.filterfalse(set(reader.fieldnames).__contains__, writer.fieldnames))
+
+        # Overwrite and BackUp fields
+        back_up = [*writer.fieldnames]
+        writer.fieldnames.clear()
+        writer.fieldnames = [*reader.fieldnames]
+
+        # Fields missing after overwrite
+        lost_initial_fields = list(itertools.filterfalse(set(writer.fieldnames).__contains__, back_up))
+        vals = ('0', '1', '2', '3', '5', '6', '7', '8', '9', '10')
+
+        missing = []
+        missing_after_overwrite = []
+        for fld in missing_fields:
+            if not fld.__str__().startswith(vals):
+                missing.append(fld)
+
+        for fld in lost_initial_fields:
+            missing_after_overwrite.append(fld)
+
+        def write_field_names(missed, after_overwrite=None):
+            """
+            Write fields to the file that are missing
+            :param after_overwrite:
+            :param missed:
+            """
+            if missed:
+                for field in missed:
+                    # Get the index of the missing field
+                    if field not in reader.fieldnames or after_overwrite:
+                        idx = back_up.index(field)
+                        writer.fieldnames.insert(idx, field)
+                    else:
+                        idx = reader.fieldnames.index(field)
+                        writer.fieldnames.insert(idx, field)
+
+        write_field_names(missing)
+        write_field_names(missing_after_overwrite, after_overwrite=True)
+
+    writer.writerow(file_rw_ready)
+    sub_forms_file.close()
 
 
 def create_zip_file(surveys):
@@ -156,11 +211,14 @@ def create_zip_file(surveys):
             if isinstance(value, list):
                 for item in value:
                     if isinstance(item, dict):
-                        data[key] = pd.DataFrame(value).to_dict(orient="records")
-                    else:
-                        data[key] = ' | '.join(value)
+                        create_subforms(item, key, k, list_of_subforms)
             elif isinstance(value, dict):
-                data[key] = flatten_dict_or_create_subforms(value, key, k, list_of_subforms)
+                # Checks if all values have a uniform data type. These should not
+                # be made sub forms e.g 'tMNLLocationID'
+                if set(list(map(type, value.values()))).__len__() == 1:
+                    data[key] = value
+                else:
+                    create_subforms(value, key, k, list_of_subforms)
             else:
                 data[key] = value
         list_of_registrations.append(data)
@@ -187,7 +245,8 @@ def get_batch_registrations(bucket_name, prefix=None):
 
     bucket = storage_client.get_bucket(bucket_name)
 
-    latest = list(bucket.list_blobs(prefix=f'source/{prefix}/folders'))[-1].download_as_string() if prefix == 'surveys' else\
+    latest = list(bucket.list_blobs(prefix=f'source/{prefix}/folders'))[
+        -1].download_as_string() if prefix == 'surveys' else \
         list(bucket.list_blobs(prefix=f'source/registrations/{prefix}'))[-1].download_as_string()
     logger.info("Downloaded Survey String", latest)
     return json.loads(latest)
