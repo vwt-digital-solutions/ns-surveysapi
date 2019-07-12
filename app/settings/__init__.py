@@ -14,6 +14,7 @@ from google.cloud import storage
 
 logger = logging.getLogger(__name__)
 
+CSV_DELIMITER = ';'
 
 def get_label(key, value):
     """
@@ -84,7 +85,7 @@ def create_csv_file(surveys):
         list_of_registrations.append(data)
 
     df = pd.io.json.json_normalize(list_of_registrations, sep=".")
-    return df.to_csv()
+    return df.to_csv(sep = CSV_DELIMITER)
 
 
 def create_subforms(value, reference, survey, list_of_subforms):
@@ -102,86 +103,57 @@ def create_subforms(value, reference, survey, list_of_subforms):
     :return:
     """
 
-    file_rw_ready = OrderedDict()
-    header_rows_catalogue = {}
+    toadd_data = OrderedDict()
     for key, value in value.items():
         if isinstance(value, list):
             if value.__len__() > 0:
                 for index, item in enumerate(value):
                     if isinstance(item, str):
-                        file_rw_ready[key] = item
+                        toadd_data[key] = item
                     else:
-                        file_rw_ready[f"{index}_{key}"] = pd.io.json.json_normalize(item, sep=".").to_dict(
+                        toadd_data[f"{index}_{key}"] = pd.io.json.json_normalize(item, sep=".").to_dict(
                             orient="records")[0]
             else:
-                file_rw_ready[key] = ''
+                toadd_data[key] = ''
 
         else:
-            file_rw_ready.update({key: value})
+            toadd_data.update({key: value})
 
-    file_rw_ready = pd.io.json.json_normalize(file_rw_ready).to_dict(orient='records')[0]
-    field_names = list(file_rw_ready.keys())
+    toadd_data = pd.io.json.json_normalize(toadd_data).to_dict(orient='records')[0]
+    toadd_field_names = list(toadd_data.keys())
 
     # Serial number on first column
-    fields = ['serialNumber', *field_names]
-    file_rw_ready = {'serialNumber': survey, **file_rw_ready}
+    toadd_field_names = ['serialNumber', *toadd_field_names]
+    toadd_data = {'serialNumber': survey, **toadd_data}
 
-    # Add to csv or write a new file
-    sub_forms_file = open(f"{gettempdir()}/{reference}.csv", "a") if reference in list_of_subforms else \
-        open(f"{gettempdir()}/{reference}.csv", "w")
+    should_write_header = False
+
+    if reference in list_of_subforms:
+        # Read header to check headers are the same
+        previous_reader = csv.DictReader(open(f'{gettempdir()}/{reference}.header.csv', "r"), delimiter=CSV_DELIMITER)
+        combined_field_names = [*previous_reader.fieldnames]
+
+        for toadd_field_name in toadd_field_names:
+            if toadd_field_name not in combined_field_names:
+                combined_field_names.append(toadd_field_name)
+                should_write_header = True
+        sub_forms_data_file = open(f"{gettempdir()}/{reference}.data.csv", "a")
+    else:
+        combined_field_names = toadd_field_names
+        sub_forms_data_file = open(f"{gettempdir()}/{reference}.data.csv", "w")
+        list_of_subforms.append(reference)
+        should_write_header = True
+
+    if should_write_header:
+        # (Re)write header
+        header_writer = csv.DictWriter(open(f'{gettempdir()}/{reference}.header.csv', "w"), fieldnames=combined_field_names,
+                                      delimiter=CSV_DELIMITER)
+        header_writer.writeheader()
 
     # Add content to CSV and file to list of sub forms
-    writer = csv.DictWriter(sub_forms_file, fieldnames=fields)
-    if reference not in list_of_subforms:
-        writer.writeheader()
-        list_of_subforms.append(reference)
-
-    # Read header to check headers are the same
-    reader = csv.DictReader(open(f'{gettempdir()}/{reference}.csv'))
-    file_length = [x for x in reader].__len__()
-    if not reader.fieldnames == fields and file_length > 0:
-        # Fields missing in original csv file
-        missing_fields = list(itertools.filterfalse(set(reader.fieldnames).__contains__, writer.fieldnames))
-
-        # Overwrite and BackUp fields
-        back_up = [*writer.fieldnames]
-        writer.fieldnames.clear()
-        writer.fieldnames = [*reader.fieldnames]
-
-        # Fields missing after overwrite
-        lost_initial_fields = list(itertools.filterfalse(set(writer.fieldnames).__contains__, back_up))
-        vals = ('0', '1', '2', '3', '5', '6', '7', '8', '9', '10')
-
-        missing = []
-        missing_after_overwrite = []
-        for fld in missing_fields:
-            if not fld.__str__().startswith(vals):
-                missing.append(fld)
-
-        for fld in lost_initial_fields:
-            missing_after_overwrite.append(fld)
-
-        def write_field_names(missed, after_overwrite=None):
-            """
-            Write fields to the file that are missing
-            :param after_overwrite:
-            :param missed:
-            """
-            if missed:
-                for field in missed:
-                    # Get the index of the missing field
-                    if field not in reader.fieldnames or after_overwrite:
-                        idx = back_up.index(field)
-                        writer.fieldnames.insert(idx, field)
-                    else:
-                        idx = reader.fieldnames.index(field)
-                        writer.fieldnames.insert(idx, field)
-
-        write_field_names(missing)
-        write_field_names(missing_after_overwrite, after_overwrite=True)
-
-    writer.writerow(file_rw_ready)
-    sub_forms_file.close()
+    writer = csv.DictWriter(sub_forms_data_file, fieldnames=combined_field_names, delimiter=CSV_DELIMITER)
+    writer.writerow(toadd_data)
+    sub_forms_data_file.close()
 
 
 def create_zip_file(surveys):
@@ -224,10 +196,14 @@ def create_zip_file(surveys):
         list_of_registrations.append(data)
 
     df = pd.io.json.json_normalize(list_of_registrations, sep=".")
-    df.to_csv(f"{gettempdir()}/surveys_main.csv", index=None)
+    df.to_csv(f"{gettempdir()}/surveys_main.csv", index=None, sep=CSV_DELIMITER)
 
     surveys_zip.write(f"{gettempdir()}/surveys_main.csv", 'surveys_main.csv')
     for subform_name in list_of_subforms:
+        combined_subform_csv = open(f"{gettempdir()}/{subform_name}.csv", "w")
+        combined_subform_csv.write(open(f"{gettempdir()}/{subform_name}.header.csv", "r").read())
+        combined_subform_csv.write(open(f"{gettempdir()}/{subform_name}.data.csv", "r").read())
+        combined_subform_csv.close()
         surveys_zip.write(f"{gettempdir()}/{subform_name}.csv", f"{subform_name}.csv")
     surveys_zip.close()
 
