@@ -131,7 +131,7 @@ def create_subforms(value, reference, survey, list_of_subforms):
         open(f"{gettempdir()}/{reference}.csv", "w")
 
     # Add content to CSV and file to list of sub forms
-    writer = csv.DictWriter(sub_forms_file, fieldnames=fields)
+    writer = csv.DictWriter(sub_forms_file, fieldnames=fields, delimiter=';')
     if reference not in list_of_subforms:
         writer.writeheader()
         list_of_subforms.append(reference)
