@@ -84,7 +84,7 @@ def create_csv_file(surveys):
         list_of_registrations.append(data)
 
     df = pd.io.json.json_normalize(list_of_registrations, sep=".")
-    return df.to_csv()
+    return df.to_csv(sep = ";")
 
 
 def create_subforms(value, reference, survey, list_of_subforms):
@@ -224,7 +224,7 @@ def create_zip_file(surveys):
         list_of_registrations.append(data)
 
     df = pd.io.json.json_normalize(list_of_registrations, sep=".")
-    df.to_csv(f"{gettempdir()}/surveys_main.csv", index=None)
+    df.to_csv(f"{gettempdir()}/surveys_main.csv", index=None, sep=";")
 
     surveys_zip.write(f"{gettempdir()}/surveys_main.csv", 'surveys_main.csv')
     for subform_name in list_of_subforms:
