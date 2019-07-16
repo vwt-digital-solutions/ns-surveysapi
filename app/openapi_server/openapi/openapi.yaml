@@ -143,6 +143,8 @@ paths:
     get:
       description: Download previously requested information
       operationId: get_surveys_nonce
+      parameters:
+        - $ref: '#/components/parameters/nonce'
       responses:
         '200':
           description: download started
