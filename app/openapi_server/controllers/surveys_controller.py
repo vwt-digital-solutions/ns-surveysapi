@@ -231,7 +231,7 @@ def get_registrations_as_csv(survey_id):
     downloads_key = db_client.key('Downloads', nonce)
     downloads = datastore.Entity(key=downloads_key)
     downloads.update({
-        'created': datetime.datetime.utcnow(),
+        'created': datetime.datetime.now(),
         'headers': {
             "Content-Type": "text/csv",
             "Content-Disposition": 'attachment; filename="~/blobs.csv"'
@@ -376,7 +376,7 @@ def get_surveys_nonce(nonce):
     downloads_key = db_client.key('Downloads', nonce)
     downloads = db_client.get(downloads_key)
     if downloads:
-        delta = datetime.datetime.utcnow() - downloads['created']
+        delta = datetime.datetime.now() - downloads['created']
         store_client = storage.Client()
         nonce_bucket = store_client.get_bucket(NONCE_BUCKET)
         nonce_blob = nonce_bucket.blob(nonce)
