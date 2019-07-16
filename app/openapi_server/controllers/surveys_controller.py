@@ -10,7 +10,7 @@ import datetime
 import config
 
 from flask import jsonify
-from flask import Response, send_file
+from flask import Response, send_file, redirect
 
 from google.cloud import storage, datastore
 from settings import get_batch_registrations, create_csv_file, create_zip_file
@@ -381,13 +381,14 @@ def get_surveys_nonce(nonce):
         nonce_bucket = store_client.get_bucket(NONCE_BUCKET)
         nonce_blob = nonce_bucket.blob(nonce)
         try:
+            return redirect(f'https://storage.cloud.google.com/vwt-d-gew1-ns-surveys-nonce-stg/${nonce}')
             # if delta.seconds < 10:
-                payload = nonce_blob.download_as_string()
-                headers = downloads['headers']
+            #     payload = nonce_blob.download_as_string()
+            #     headers = downloads['headers']
                 # nonce_bucket.delete_blob(nonce_blob)
                 # db_client.delete(downloads_key)
-                rsp = Response(payload, headers)
-                return rsp
+                # rsp = Response(payload, headers)
+                # return rsp
             # else:
             #     logger.error(f'Nonce too old {nonce}')
         finally:
