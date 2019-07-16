@@ -376,20 +376,20 @@ def get_surveys_nonce(nonce):
     downloads_key = db_client.key('Downloads', nonce)
     downloads = db_client.get(downloads_key)
     if downloads:
-        delta = datetime.datetime.now() - downloads['created']
+        # delta = datetime.datetime.now() - downloads['created']
         store_client = storage.Client()
         nonce_bucket = store_client.get_bucket(NONCE_BUCKET)
         nonce_blob = nonce_bucket.blob(nonce)
         try:
-            if delta.seconds < 10:
+            # if delta.seconds < 10:
                 payload = nonce_blob.download_as_string()
                 headers = downloads['headers']
                 # nonce_bucket.delete_blob(nonce_blob)
                 # db_client.delete(downloads_key)
                 rsp = Response(payload, headers)
                 return rsp
-            else:
-                logger.error(f'Nonce too old {nonce}')
+            # else:
+            #     logger.error(f'Nonce too old {nonce}')
         finally:
             db_client.delete(downloads_key)
             nonce_bucket.delete_blob(nonce_blob)
