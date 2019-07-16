@@ -7,6 +7,7 @@ import zipfile
 import mimetypes
 import datetime
 import time
+import threading
 
 import config
 
@@ -392,9 +393,10 @@ def get_surveys_nonce(nonce):
             #     logger.error(f'Nonce too old {nonce}')
         finally:
             db_client.delete(downloads_key)
-            # time.sleep(5)
-            # store_client = storage.Client()
-            # nonce_bucket = store_client.get_bucket(NONCE_BUCKET)
-            # nonce_bucket.delete_blob(nonce)
 
-
+            def cleanup():
+                time.sleep(15)
+                store_client = storage.Client()
+                nonce_bucket = store_client.get_bucket(NONCE_BUCKET)
+                nonce_bucket.delete_blob(nonce)
+            threading.Thread(target=cleanup).start()
