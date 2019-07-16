@@ -379,7 +379,7 @@ def get_surveys_nonce(nonce):
         # delta = datetime.datetime.now() - downloads['created']
         # nonce_blob = nonce_bucket.blob(nonce)
         try:
-            return redirect(f'https://storage.cloud.google.com/vwt-d-gew1-ns-surveys-nonce-stg/${nonce}')
+            return redirect(f'https://storage.cloud.google.com/vwt-d-gew1-ns-surveys-nonce-stg/{nonce}')
             # if delta.seconds < 10:
             #     payload = nonce_blob.download_as_string()
             #     headers = downloads['headers']
