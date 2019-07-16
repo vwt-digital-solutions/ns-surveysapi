@@ -155,6 +155,7 @@ paths:
             text/csv:
               schema:
                 $ref: '#/components/schemas/csvFile'
+      x-openapi-router-controller: openapi_server.controllers.surveys_controller
 components:
   schemas:
     zipFile:
