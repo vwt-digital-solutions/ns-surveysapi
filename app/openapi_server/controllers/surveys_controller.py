@@ -377,9 +377,7 @@ def get_surveys_nonce(nonce):
     downloads = db_client.get(downloads_key)
     if downloads:
         # delta = datetime.datetime.now() - downloads['created']
-        store_client = storage.Client()
-        nonce_bucket = store_client.get_bucket(NONCE_BUCKET)
-        nonce_blob = nonce_bucket.blob(nonce)
+        # nonce_blob = nonce_bucket.blob(nonce)
         try:
             return redirect(f'https://storage.cloud.google.com/vwt-d-gew1-ns-surveys-nonce-stg/${nonce}')
             # if delta.seconds < 10:
@@ -393,6 +391,8 @@ def get_surveys_nonce(nonce):
             #     logger.error(f'Nonce too old {nonce}')
         finally:
             db_client.delete(downloads_key)
-            nonce_bucket.delete_blob(nonce_blob)
+            store_client = storage.Client()
+            nonce_bucket = store_client.get_bucket(NONCE_BUCKET)
+            nonce_bucket.delete_blob(nonce)
 
 
