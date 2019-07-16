@@ -1,9 +1,11 @@
 import json
 import logging
 import os
+import uuid
 import tempfile
 import zipfile
 import mimetypes
+import datetime
 
 import config
 
@@ -12,7 +14,7 @@ import config
 from flask import jsonify
 from flask import Response, send_file
 
-from google.cloud import storage
+from google.cloud import storage, datastore
 from settings import get_batch_registrations, create_csv_file, create_zip_file
 from exceptions import AttachmentsNotFound, RegistrationsNotFound
 
@@ -56,7 +58,7 @@ class Registration:
             else:
                 raise RegistrationsNotFound('Empty Folder', f'There are no registrations for this folder: {prefix}')
         except Exception as error:
-            return jsonify({error.message: error.error})
+            raise RegistrationsNotFound('Processing error', error)
 
     def get_csv(self, survey_id):
         """
@@ -218,14 +220,35 @@ def get_registrations_as_csv(survey_id):
     This aims to create a csv file from all
     the registrations that have been downloaded
     """
-    return Response(
-        registration_instance.get_csv(survey_id),
-        headers={
+    store_client = storage.Client()
+    nonce_bucket = store_client.get_bucket(config.NONCE_BUCKET)
+    nonce = str(uuid.uuid4())
+    nonce_blob = nonce_bucket.blob(nonce)
+    nonce_blob.upload_from_string(registration_instance.get_csv(survey_id))
+    db_client = datastore.Client()
+    downloads_key = db_client.key('Downloads', nonce)
+    downloads = datastore.Entity(key=downloads_key)
+    downloads.update({
+        'created': datetime.datetime.utcnow(),
+        'headers': {
             "Content-Type": "text/csv",
-            "Content-Disposition": 'attachment; filename="~/blobs.csv"',
-            "Authorization": ''
-        },
-    )
+            "Content-Disposition": 'attachment; filename="~/blobs.csv"'
+            # "Authorization": ''
+        }
+    })
+    db_client.put(downloads)
+    return Response(downloads.key.id_or_name,
+                    headers={
+                        'Content-Type': 'text/plain'
+                    })
+    # return Response(
+    #     registration_instance.get_csv(survey_id),
+    #     headers={
+    #         "Content-Type": "text/csv",
+    #         "Content-Disposition": 'attachment; filename="~/blobs.csv"',
+    #         "Authorization": ''
+    #     },
+    # )
 
 
 def get_registrations_as_zip(survey_id):
@@ -233,15 +256,36 @@ def get_registrations_as_zip(survey_id):
     This aims to create a csv zip file from all
     the registrations that have been downloaded
     """
-    try:
-        return send_file(
-            registration_instance.get_zip(survey_id),
-            mimetype='application/zip',
-            as_attachment=True,
-            attachment_filename='surveys.zip'
-        )
-    except Exception as e:
-        return jsonify({'Important': f'{e}'})
+    store_client = storage.Client()
+    nonce_bucket = store_client.get_bucket(config.NONCE_BUCKET)
+    nonce = str(uuid.uuid4())
+    nonce_blob = nonce_bucket.blob(nonce)
+    nonce_blob.upload_from_filename(registration_instance.get_zip(survey_id))
+    db_client = datastore.Client()
+    downloads_key = db_client.key('Downloads', nonce)
+    downloads = datastore.Entity(key=downloads_key)
+    downloads.update({
+        'created': datetime.datetime.utcnow(),
+        'headers': {
+            "Content-Type": "application/zip",
+            "Content-Disposition": 'attachment; filename="~/surveys.zip"'
+            # "Authorization": ''
+        }
+    })
+    db_client.put(downloads)
+    return Response(downloads.key.id_or_name,
+                    headers={
+                        'Content-Type': 'text/plain'
+                    })
+    # try:
+    #     return send_file(
+    #         registration_instance.get_zip(survey_id),
+    #         mimetype='application/zip',
+    #         as_attachment=True,
+    #         attachment_filename='surveys.zip'
+    #     )
+    # except Exception as e:
+    #     return jsonify({'Important': f'{e}'})
 
 
 def get_registrations_list(survey_id):
@@ -287,11 +331,65 @@ def get_single_images_archive(survey_id, registration_id):
     :param registration_id: An integer that represents a Registration e.g => 7
     :return:
     """
-    return Response(
-        open(registration_instance.get_single_registration_images_archive(survey_id, registration_id), 'rb').read(),
-        headers={
-            'Content-Type': "application/zip",
-            'Transfer-Encoding': 'chunked',
-            'Content-Disposition': f'attachment;filename=image-{survey_id}-{registration_id}.zip',
+    store_client = storage.Client()
+    nonce_bucket = store_client.get_bucket(config.NONCE_BUCKET)
+    nonce = str(uuid.uuid4())
+    nonce_blob = nonce_bucket.blob(nonce)
+    nonce_blob.upload_from_filename(
+        registration_instance.get_single_registration_images_archive(survey_id, registration_id))
+    db_client = datastore.Client()
+    downloads_key = db_client.key('Downloads', nonce)
+    downloads = datastore.Entity(key=downloads_key)
+    downloads.update({
+        'created': datetime.datetime.utcnow(),
+        'headers': {
+            "Content-Type": "application/zip",
+            "Content-Disposition":
+                f'attachment; filename="image-{survey_id}-{registration_id}.zip"'
+            # "Authorization": ''
         }
-    )
+    })
+    db_client.put(downloads)
+    return Response(downloads.key.id_or_name,
+                    headers={
+                        'Content-Type': 'text/plain'
+                    })
+    # return Response(
+    #     open(registration_instance.get_single_registration_images_archive(survey_id, registration_id), 'rb').read(),
+    #     headers={
+    #         'Content-Type': "application/zip",
+    #         'Transfer-Encoding': 'chunked',
+    #         'Content-Disposition': f'attachment;filename=image-{survey_id}-{registration_id}.zip',
+    #     }
+    # )
+
+
+def get_surveys_nonce(nonce):
+    """
+    Perform actual download operation of already prepared data
+    :param nonce:
+    :return:
+    """
+    db_client = datastore.Client()
+    downloads_key = db_client.key('Downloads', nonce)
+    downloads = db_client.get(downloads_key)
+    if downloads:
+        delta = datetime.datetime.utcnow() - downloads['created']
+        store_client = storage.Client()
+        nonce_bucket = store_client.get_bucket(config.NONCE_BUCKET)
+        nonce_blob = nonce_bucket.blob(nonce)
+        try:
+            if delta.seconds < 10:
+                payload = nonce_blob.download_as_string()
+                headers = downloads['headers']
+                # nonce_bucket.delete_blob(nonce_blob)
+                # db_client.delete(downloads_key)
+                rsp = Response(payload, headers)
+                return rsp
+            else:
+                logger.error(f'Nonce too old {nonce}')
+        finally:
+            db_client.delete(downloads_key)
+            nonce_bucket.delete_blob(nonce_blob)
+
+

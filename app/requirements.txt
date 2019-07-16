@@ -1,5 +1,6 @@
 pandas==0.24.2
 google-cloud-storage
+google-cloud-datastore
 connexion==2.2.0
 Flask==1.0.2
 gunicorn==19.9.0
