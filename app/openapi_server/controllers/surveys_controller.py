@@ -9,8 +9,6 @@ import datetime
 
 import config
 
-import config
-
 from flask import jsonify
 from flask import Response, send_file
 
@@ -20,6 +18,10 @@ from exceptions import AttachmentsNotFound, RegistrationsNotFound
 
 logger = logging.getLogger(__name__)
 
+if hasattr(config, 'NONCE_BUCKET'):
+    NONCE_BUCKET = config.NONCE_BUCKET
+else:
+    NONCE_BUCKET = 'vwt-d-gew1-ns-surveys-nonce-stg'
 
 class Registration:
     """
@@ -221,7 +223,7 @@ def get_registrations_as_csv(survey_id):
     the registrations that have been downloaded
     """
     store_client = storage.Client()
-    nonce_bucket = store_client.get_bucket(config.NONCE_BUCKET)
+    nonce_bucket = store_client.get_bucket(NONCE_BUCKET)
     nonce = str(uuid.uuid4())
     nonce_blob = nonce_bucket.blob(nonce)
     nonce_blob.upload_from_string(registration_instance.get_csv(survey_id))
@@ -257,7 +259,7 @@ def get_registrations_as_zip(survey_id):
     the registrations that have been downloaded
     """
     store_client = storage.Client()
-    nonce_bucket = store_client.get_bucket(config.NONCE_BUCKET)
+    nonce_bucket = store_client.get_bucket(NONCE_BUCKET)
     nonce = str(uuid.uuid4())
     nonce_blob = nonce_bucket.blob(nonce)
     nonce_blob.upload_from_filename(registration_instance.get_zip(survey_id))
@@ -332,7 +334,7 @@ def get_single_images_archive(survey_id, registration_id):
     :return:
     """
     store_client = storage.Client()
-    nonce_bucket = store_client.get_bucket(config.NONCE_BUCKET)
+    nonce_bucket = store_client.get_bucket(NONCE_BUCKET)
     nonce = str(uuid.uuid4())
     nonce_blob = nonce_bucket.blob(nonce)
     nonce_blob.upload_from_filename(
@@ -376,7 +378,7 @@ def get_surveys_nonce(nonce):
     if downloads:
         delta = datetime.datetime.utcnow() - downloads['created']
         store_client = storage.Client()
-        nonce_bucket = store_client.get_bucket(config.NONCE_BUCKET)
+        nonce_bucket = store_client.get_bucket(NONCE_BUCKET)
         nonce_blob = nonce_bucket.blob(nonce)
         try:
             if delta.seconds < 10:
