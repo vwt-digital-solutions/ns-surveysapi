@@ -271,7 +271,7 @@ def get_registrations_as_zip(survey_id):
         }
     })
     db_client.put(downloads)
-    return Response({'nonce': downloads.key.id_or_name, "mime_type": "application/zip"},
+    return Response(json.dumps({'nonce': downloads.key.id_or_name, "mime_type": "application/zip"}),
                     headers={
                         'Content-Type': 'application/json'
                     })
@@ -340,7 +340,7 @@ def get_single_images_archive(survey_id, registration_id):
         }
     })
     db_client.put(downloads)
-    return Response({'nonce': downloads.key.id_or_name, "mime_type": "application/json"},
+    return Response(json.dumps({'nonce': downloads.key.id_or_name, "mime_type": "application/json"}),
                     headers={
                         'Content-Type': 'application/json'
                     })
