@@ -227,13 +227,14 @@ def get_registrations_as_csv(survey_id):
     store_client = storage.Client()
     nonce_bucket = store_client.get_bucket(NONCE_BUCKET)
     nonce = str(uuid.uuid4())
-    nonce_blob = nonce_bucket.blob(nonce)
+    nonce_blob = nonce_bucket.blob(f'{nonce}.csv')
     nonce_blob.upload_from_string(registration_instance.get_csv(survey_id), content_type="text/csv")
     db_client = datastore.Client()
     downloads_key = db_client.key('Downloads', nonce)
     downloads = datastore.Entity(key=downloads_key)
     downloads.update({
         'created': datetime.datetime.now(),
+        'blob_name': f'{nonce}.csv',
         'headers': {
             "Content-Type": "text/csv",
             "Content-Disposition": 'attachment; filename="~/blobs.csv"'
@@ -245,14 +246,6 @@ def get_registrations_as_csv(survey_id):
                     headers={
                         'Content-Type': 'text/plain'
                     })
-    # return Response(
-    #     registration_instance.get_csv(survey_id),
-    #     headers={
-    #         "Content-Type": "text/csv",
-    #         "Content-Disposition": 'attachment; filename="~/blobs.csv"',
-    #         "Authorization": ''
-    #     },
-    # )
 
 
 def get_registrations_as_zip(survey_id):
@@ -263,13 +256,14 @@ def get_registrations_as_zip(survey_id):
     store_client = storage.Client()
     nonce_bucket = store_client.get_bucket(NONCE_BUCKET)
     nonce = str(uuid.uuid4())
-    nonce_blob = nonce_bucket.blob(nonce)
+    nonce_blob = nonce_bucket.blob(f'{nonce}.zip')
     nonce_blob.upload_from_filename(registration_instance.get_zip(survey_id), content_type="application/zip")
     db_client = datastore.Client()
     downloads_key = db_client.key('Downloads', nonce)
     downloads = datastore.Entity(key=downloads_key)
     downloads.update({
         'created': datetime.datetime.utcnow(),
+        'blob_name': f'{nonce}.zip',
         'headers': {
             "Content-Type": "application/zip",
             "Content-Disposition": 'attachment; filename="~/surveys.zip"'
@@ -281,15 +275,6 @@ def get_registrations_as_zip(survey_id):
                     headers={
                         'Content-Type': 'text/plain'
                     })
-    # try:
-    #     return send_file(
-    #         registration_instance.get_zip(survey_id),
-    #         mimetype='application/zip',
-    #         as_attachment=True,
-    #         attachment_filename='surveys.zip'
-    #     )
-    # except Exception as e:
-    #     return jsonify({'Important': f'{e}'})
 
 
 def get_registrations_list(survey_id):
@@ -338,7 +323,7 @@ def get_single_images_archive(survey_id, registration_id):
     store_client = storage.Client()
     nonce_bucket = store_client.get_bucket(NONCE_BUCKET)
     nonce = str(uuid.uuid4())
-    nonce_blob = nonce_bucket.blob(nonce)
+    nonce_blob = nonce_bucket.blob(f'{nonce}.zip')
     nonce_blob.upload_from_filename(
         registration_instance.get_single_registration_images_archive(survey_id, registration_id), content_type="application/zip")
     db_client = datastore.Client()
@@ -346,6 +331,7 @@ def get_single_images_archive(survey_id, registration_id):
     downloads = datastore.Entity(key=downloads_key)
     downloads.update({
         'created': datetime.datetime.utcnow(),
+        'blob_name': f'{nonce}.zip',
         'headers': {
             "Content-Type": "application/zip",
             "Content-Disposition":
@@ -358,14 +344,6 @@ def get_single_images_archive(survey_id, registration_id):
                     headers={
                         'Content-Type': 'text/plain'
                     })
-    # return Response(
-    #     open(registration_instance.get_single_registration_images_archive(survey_id, registration_id), 'rb').read(),
-    #     headers={
-    #         'Content-Type': "application/zip",
-    #         'Transfer-Encoding': 'chunked',
-    #         'Content-Disposition': f'attachment;filename=image-{survey_id}-{registration_id}.zip',
-    #     }
-    # )
 
 
 def get_surveys_nonce(nonce):
@@ -381,7 +359,7 @@ def get_surveys_nonce(nonce):
         # delta = datetime.datetime.now() - downloads['created']
         # nonce_blob = nonce_bucket.blob(nonce)
         try:
-            return redirect(f'https://storage.cloud.google.com/vwt-d-gew1-ns-surveys-nonce-stg/{nonce}')
+            return redirect(f'https://storage.cloud.google.com/vwt-d-gew1-ns-surveys-nonce-stg/{downloads["blob_name"]}')
             # if delta.seconds < 10:
             #     payload = nonce_blob.download_as_string()
             #     headers = downloads['headers']
@@ -398,5 +376,6 @@ def get_surveys_nonce(nonce):
                 time.sleep(15)
                 store_client = storage.Client()
                 nonce_bucket = store_client.get_bucket(NONCE_BUCKET)
-                nonce_bucket.delete_blob(nonce)
+                nonce_bucket.delete_blob(downloads['blob_name'])
+
             threading.Thread(target=cleanup).start()
