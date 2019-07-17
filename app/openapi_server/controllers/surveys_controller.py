@@ -242,7 +242,7 @@ def get_registrations_as_csv(survey_id):
         }
     })
     db_client.put(downloads)
-    return Response({'nonce': downloads.key.id_or_name, "mime_type": "text/csv"},
+    return Response(json.dumps({'nonce': downloads.key.id_or_name, "mime_type": "text/csv"}),
                     headers={
                         'Content-Type': 'application/json'
                     })
