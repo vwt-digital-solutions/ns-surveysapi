@@ -324,8 +324,10 @@ def get_single_images_archive(survey_id, registration_id):
     nonce_bucket = store_client.get_bucket(NONCE_BUCKET)
     nonce = str(uuid.uuid4())
     nonce_blob = nonce_bucket.blob(f'{nonce}.zip')
+    logger.info('Single image archive before generation')
     nonce_blob.upload_from_filename(
         registration_instance.get_single_registration_images_archive(survey_id, registration_id), content_type="application/zip")
+    logger.info('Single image archive generated')
     db_client = datastore.Client()
     downloads_key = db_client.key('Downloads', nonce)
     downloads = datastore.Entity(key=downloads_key)
@@ -340,6 +342,7 @@ def get_single_images_archive(survey_id, registration_id):
         }
     })
     db_client.put(downloads)
+    logger.info('SIngle image archive nonce stored')
     return Response(json.dumps({'nonce': downloads.key.id_or_name, "mime_type": "application/json"}),
                     headers={
                         'Content-Type': 'application/json'
