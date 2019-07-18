@@ -228,7 +228,7 @@ class Registration:
             forms[key] = []
             for form in value:
                 forms[key].append(dict(survey_id=form['properties']['view_id'], name=form['properties']['label_text'],
-                                       has_images=form['properties']['view_id'] in self.registrations_with_images,
+                                       has_images=form['properties']['view_id'] in self.get_registration_with_image(),
                                        description_text=
                                        form['properties']['description_text']
                                        if 'description_text' in form['properties'].keys() else ''))
