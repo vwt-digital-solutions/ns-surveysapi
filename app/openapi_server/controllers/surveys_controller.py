@@ -82,7 +82,7 @@ class Registration:
         :return:
         """
         registrations = self.get_registrations(prefix=survey_id)
-        return create_zip_file(registrations)
+        return create_zip_file(registrations, self.request_id)
 
     def get_list(self, survey_id):
         """
@@ -156,7 +156,8 @@ class Registration:
 
         return location
 
-    def clean_images(self, location):
+    @staticmethod
+    def clean_images(location):
         logger.warning(f'Cleanup {location}')
         try:
             # os.remove(f'{location}*/*')
@@ -203,7 +204,7 @@ class Registration:
         :return:
         """
         location = self.get_images(survey_id, registration_id)
-        images_file = f"{tempfile.gettempdir()}/img-{registration_id}.zip"
+        images_file = f"{tempfile.gettempdir()}/{self.request_id}/img-{registration_id}.zip"
 
         self.zip_image_dir(location, images_file)
         self.clean_images(location)
@@ -278,7 +279,10 @@ def get_registrations_as_zip(survey_id):
     nonce = str(uuid.uuid4())
     nonce_blob = nonce_bucket.blob(f'{nonce}.zip')
     registration_instance = Registration(bucket=config.BUCKET)
-    nonce_blob.upload_from_filename(registration_instance.get_zip(survey_id), content_type="application/zip")
+    zip_file_name = registration_instance.get_zip(survey_id)
+    nonce_blob.upload_from_filename(zip_file_name, content_type="application/zip")
+    os.remove(zip_file_name)
+    os.removedirs(os.path.dirname(zip_file_name))
     db_client = datastore.Client()
     downloads_key = db_client.key('Downloads', nonce)
     downloads = datastore.Entity(key=downloads_key)
@@ -350,8 +354,10 @@ def get_single_images_archive(survey_id, registration_id):
     nonce_blob = nonce_bucket.blob(f'{nonce}.zip')
     logger.warn('Single image archive before generation')
     registration_instance = Registration(bucket=config.BUCKET)
-    nonce_blob.upload_from_filename(
-        registration_instance.get_single_registration_images_archive(survey_id, registration_id), content_type="application/zip")
+    zip_filename = registration_instance.get_single_registration_images_archive(survey_id, registration_id)
+    nonce_blob.upload_from_filename(zip_filename, content_type="application/zip")
+    os.remove(zip_filename)
+    os.removedirs(os.path.dirname(zip_filename))
     logger.warn('Single image archive generated')
     db_client = datastore.Client()
     downloads_key = db_client.key('Downloads', nonce)
