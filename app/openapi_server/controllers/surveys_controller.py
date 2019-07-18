@@ -159,7 +159,8 @@ class Registration:
     def clean_images(self, location):
         logger.warning(f'Cleanup {location}')
         try:
-            os.remove(f'{location}/*')
+            os.remove(f'{location}*/*')
+            os.rmdir(f'{location}*')
             os.rmdir(location)
             # shutil.rmtree(location)
         except OSError as e:
