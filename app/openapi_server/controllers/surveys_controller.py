@@ -205,6 +205,7 @@ class Registration:
         """
         location = self.get_images(survey_id, registration_id)
         images_file = f"{tempfile.gettempdir()}/{self.request_id}/img-{registration_id}.zip"
+        os.makedirs(os.path.dirname(images_file))
 
         self.zip_image_dir(location, images_file)
         self.clean_images(location)
