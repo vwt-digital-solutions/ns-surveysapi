@@ -134,6 +134,7 @@ class Registration:
         Retrieves a list single image of a file to a temporary directory
         """
         images = self.get_attachment_list(survey_id, registration_id)
+        logger.warning(f'Images collection: {images}')
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(self.bucket)
 
