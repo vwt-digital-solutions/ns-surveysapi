@@ -145,12 +145,13 @@ class Registration:
         except FileExistsError:
             pass
 
-        for key, value in images:
+        for key in images:
+            mime_type = images[key]
             blob = bucket.blob(key)
             logger.warning(f'Downloading {blob.name} to {location}')
             blob.download_to_filename(
                 f'{location}/{survey_id}-{registration_id if registration_id else ""}-{blob.name.split("/")[-1]}'
-                f'{mimetypes.guess_extension(value)}'
+                f'{mimetypes.guess_extension(mime_type)}'
             )
 
         return location
