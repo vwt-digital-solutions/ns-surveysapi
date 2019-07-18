@@ -118,16 +118,16 @@ class Registration:
         for blob in blobs:
             images[blob.name] = blob.content_type  # Future: Other detail neccessary for front end i.v.m type
 
-        try:
-            if images:
-                # self.images = images
-                return jsonify(images)
-            else:
-                raise AttachmentsNotFound(
-                    'Not Found', f'There were no Registration images found matching the '
-                    f'following id: {survey_id} and registration id: {registration_id}')
-        except Exception as error:
-            return jsonify({error.message: error.error})
+        # try:
+        if images:
+            # self.images = images
+            return images
+        else:
+            raise AttachmentsNotFound(
+                'Not Found', f'There were no Registration images found matching the '
+                f'following id: {survey_id} and registration id: {registration_id}')
+        # except Exception as error:
+        #     return jsonify({error.message: error.error})
 
     def get_images(self, survey_id, registration_id):
         """
@@ -191,7 +191,7 @@ class Registration:
         images_file = f"{tempfile.gettempdir()}/img-{self.request_id}.zip"
 
         self.zip_image_dir(location, images_file)
-        self.clean_images(locatione)
+        self.clean_images(location)
         return images_file
 
     def get_single_registration_images_archive(self, survey_id, registration_id):
