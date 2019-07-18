@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import shutil
 import uuid
 import tempfile
 import zipfile
@@ -35,6 +36,7 @@ class Registration:
     def __init__(self, bucket=None, survey_id=None, serial_number=None):
         self.survey_id = survey_id
         self.serial_number = serial_number
+        self.request_id = uuid.uuid4()
 
         # self.registration_list = dict()
         # self.registrations = dict()
@@ -135,18 +137,31 @@ class Registration:
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(self.bucket)
 
-        for key, value in images.items():
+        location = f"{tempfile.gettempdir()}/images/{self.request_id}/{registration_id if registration_id else survey_id}/"
+        logger.warn(location)
+        try:
+            os.makedirs(location)
+        except FileExistsError:
+            pass
+
+        for key, value in images:
             blob = bucket.blob(key)
-            location = f"{tempfile.gettempdir()}/images/{registration_id if registration_id else survey_id}/"
-            logger.warn(location)
-            try:
-                os.makedirs(location)
-            except FileExistsError:
-                pass
+            logger.warning(f'Downloading {blob.name} to {location}')
             blob.download_to_filename(
                 f'{location}/{survey_id}-{registration_id if registration_id else ""}-{blob.name.split("/")[-1]}'
                 f'{mimetypes.guess_extension(value)}'
             )
+
+        return location
+
+    def clean_images(self, location):
+        logger.warning(f'Cleanup {location}')
+        try:
+            os.remove(f'{location}/*')
+            os.rmdir(location)
+            # shutil.rmtree(location)
+        except OSError as e:
+            logger.error(f'Error: {e.filename} - {e.strerror}')
 
     @staticmethod
     def zip_image_dir(directory, zip_file_name):
@@ -172,11 +187,11 @@ class Registration:
         :param survey_id: A form or survey ID
         :return:
         """
-        self.get_images(survey_id, registration_id=False)
-        location = f"{tempfile.gettempdir()}/images/{survey_id}"
-        images_file = f"{tempfile.gettempdir()}/img-{survey_id}.zip"
+        location = self.get_images(survey_id, registration_id=False)
+        images_file = f"{tempfile.gettempdir()}/img-{self.request_id}.zip"
 
         self.zip_image_dir(location, images_file)
+        self.clean_images(locatione)
         return images_file
 
     def get_single_registration_images_archive(self, survey_id, registration_id):
@@ -184,11 +199,11 @@ class Registration:
         Download a Zip file archive for a single registration
         :return:
         """
-        self.get_images(survey_id, registration_id)
-        location = f"{tempfile.gettempdir()}/images/{registration_id}/"
+        location = self.get_images(survey_id, registration_id)
         images_file = f"{tempfile.gettempdir()}/img-{registration_id}.zip"
 
         self.zip_image_dir(location, images_file)
+        self.clean_images(location)
         return images_file
 
     def get_registration_with_image(self):
