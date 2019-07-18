@@ -36,16 +36,16 @@ class Registration:
         self.survey_id = survey_id
         self.serial_number = serial_number
 
-        self.registration_list = dict()
-        self.registrations = dict()
+        # self.registration_list = dict()
+        # self.registrations = dict()
 
         self.bucket = bucket
-        self.photos = []
+        # self.photos = []
 
-        self.storage_client = storage.Client()
-        self.storage = self.storage_client.get_bucket(self.bucket)
-        self.images = dict()
-        self.registrations_with_images = self.get_registration_with_image()
+        # self.storage_client = storage.Client()
+        # self.storage = self.storage_client.get_bucket(self.bucket)
+        # self.images = dict()
+        # self.registrations_with_images = self.get_registration_with_image()
 
     def get_registrations(self, prefix):
         """
@@ -58,8 +58,8 @@ class Registration:
             if batch['elements']:
                 for registration in batch['elements']:
                     registrations[registration["meta"]["serialNumber"]] = registration
-                self.registrations = registrations
-                return self.registrations
+                # self.registrations = registrations
+                return registrations
             else:
                 raise RegistrationsNotFound('Empty Folder', f'There are no registrations for this folder: {prefix}')
         except Exception as error:
@@ -70,8 +70,8 @@ class Registration:
         Return a csv file of all registrations
         :return:
         """
-        self.get_registrations(prefix=survey_id)
-        return create_csv_file(self.registrations)
+        registrations = self.get_registrations(prefix=survey_id)
+        return create_csv_file(registrations)
 
     def get_zip(self, survey_id):
         """
@@ -79,27 +79,27 @@ class Registration:
 
         :return:
         """
-        self.get_registrations(prefix=survey_id)
-        return create_zip_file(self.registrations)
+        registrations = self.get_registrations(prefix=survey_id)
+        return create_zip_file(registrations)
 
     def get_list(self, survey_id):
         """
         Get a list of all registrations meta information
         :return:
         """
-        self.get_registrations(prefix=survey_id)
+        registrations = self.get_registrations(prefix=survey_id)
         registration_list = {}
-        for key in self.registrations:
-            registration_list[self.registrations[key]['info']['formId']] = \
+        for key in registrations:
+            registration_list[registrations[key]['info']['formId']] = \
                 [dict(serial_number=k,
                       date_of_registration=int(v['meta']['registrationDate']),
                       site_location=v['data']['tMNLLocationID']['CITY'] if 'tMNLLocationID' in v[
                           'data'].keys() else '',
                       site_id=v['data']['siteID'] if 'siteID' in v['data'].keys() else
                       ''.join(n for n in v['info']['formName'] if n.isdigit())
-                      ) for k, v in self.registrations.items()]
+                      ) for k, v in registrations.items()]
 
-        self.registration_list = registration_list
+        # self.registration_list = registration_list
         return json.dumps(registration_list)
 
     def get_attachment_list(self, survey_id, registration_id):
@@ -109,7 +109,7 @@ class Registration:
         :param registration_id: An int value to represent which registration is in qtn e.g e213424jfsdkfh234
         :return:
         """
-        storage_client = self.storage_client
+        storage_client = storage.Client()
         bucket = storage_client.get_bucket(self.bucket)
         blobs = bucket.list_blobs(prefix=f'attachments/{survey_id}/{registration_id if registration_id else ""}')
         images = {}
@@ -118,7 +118,7 @@ class Registration:
 
         try:
             if images:
-                self.images = images
+                # self.images = images
                 return jsonify(images)
             else:
                 raise AttachmentsNotFound(
@@ -131,11 +131,11 @@ class Registration:
         """
         Retrieves a list single image of a file to a temporary directory
         """
-        self.get_attachment_list(survey_id, registration_id)
-        storage_client = self.storage_client
+        images = self.get_attachment_list(survey_id, registration_id)
+        storage_client = storage.Client()
         bucket = storage_client.get_bucket(self.bucket)
 
-        for key, value in self.images.items():
+        for key, value in images.items():
             blob = bucket.blob(key)
             location = f"{tempfile.gettempdir()}/images/{registration_id if registration_id else survey_id}/"
             logger.warn(location)
@@ -196,7 +196,9 @@ class Registration:
         Get a list of Registrations with an image saved in the storage
         :return:
         """
-        lst_blobs = self.storage.list_blobs(prefix='attachments/')
+        storage_client = storage.Client()
+        bucket = storage_client.get_bucket(self.bucket)
+        lst_blobs = bucket.list_blobs(prefix='attachments/')
         return list(set([blob.name.split('/')[1] for blob in lst_blobs]))
 
     def get_survey_forms_list(self):
