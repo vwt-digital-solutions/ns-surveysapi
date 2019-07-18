@@ -218,9 +218,6 @@ class Registration:
         return json.dumps(forms)
 
 
-registration_instance = Registration(bucket=config.BUCKET)
-
-
 def get_registrations_as_csv(survey_id):
     """
     This aims to create a csv file from all
@@ -230,6 +227,7 @@ def get_registrations_as_csv(survey_id):
     nonce_bucket = store_client.get_bucket(NONCE_BUCKET)
     nonce = str(uuid.uuid4())
     nonce_blob = nonce_bucket.blob(f'{nonce}.csv')
+    registration_instance = Registration(bucket=config.BUCKET)
     nonce_blob.upload_from_string(registration_instance.get_csv(survey_id), content_type="text/csv")
     db_client = datastore.Client()
     downloads_key = db_client.key('Downloads', nonce)
@@ -259,6 +257,7 @@ def get_registrations_as_zip(survey_id):
     nonce_bucket = store_client.get_bucket(NONCE_BUCKET)
     nonce = str(uuid.uuid4())
     nonce_blob = nonce_bucket.blob(f'{nonce}.zip')
+    registration_instance = Registration(bucket=config.BUCKET)
     nonce_blob.upload_from_filename(registration_instance.get_zip(survey_id), content_type="application/zip")
     db_client = datastore.Client()
     downloads_key = db_client.key('Downloads', nonce)
@@ -284,6 +283,7 @@ def get_registrations_list(survey_id):
     Return a list of registrations
     :return:
     """
+    registration_instance = Registration(bucket=config.BUCKET)
     return Response(
         registration_instance.get_list(survey_id),
         headers={
@@ -297,6 +297,7 @@ def get_forms_list():
     Return a list of registrations
     :return:
     """
+    registration_instance = Registration(bucket=config.BUCKET)
     return Response(
         registration_instance.get_survey_forms_list(),
         headers={
@@ -312,6 +313,7 @@ def get_registrations_attachments(survey_id, registration_id):
     :param registration_id: An integer that represents a Registration e.g => 7
     :return:
     """
+    registration_instance = Registration(bucket=config.BUCKET)
     return registration_instance.get_attachment_list(survey_id, registration_id)
 
 
@@ -327,6 +329,7 @@ def get_single_images_archive(survey_id, registration_id):
     nonce = str(uuid.uuid4())
     nonce_blob = nonce_bucket.blob(f'{nonce}.zip')
     logger.warn('Single image archive before generation')
+    registration_instance = Registration(bucket=config.BUCKET)
     nonce_blob.upload_from_filename(
         registration_instance.get_single_registration_images_archive(survey_id, registration_id), content_type="application/zip")
     logger.warn('Single image archive generated')
@@ -368,10 +371,6 @@ def get_surveys_nonce(nonce):
             # if delta.seconds < 10:
             #     payload = nonce_blob.download_as_string()
             #     headers = downloads['headers']
-                # nonce_bucket.delete_blob(nonce_blob)
-                # db_client.delete(downloads_key)
-                # rsp = Response(payload, headers)
-                # return rsp
             # else:
             #     logger.error(f'Nonce too old {nonce}')
         finally:
