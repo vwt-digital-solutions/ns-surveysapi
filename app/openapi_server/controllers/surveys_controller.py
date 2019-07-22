@@ -21,13 +21,6 @@ from exceptions import AttachmentsNotFound, RegistrationsNotFound
 
 logger = logging.getLogger(__name__)
 
-# if hasattr(config, 'NONCE_BUCKET'):
-#     logger.error('All fine - found NONCE_BUCKET settings!!!!!')
-#     NONCE_BUCKET = config.NONCE_BUCKET
-# else:
-#     logger.error('Something wrong with config - no NONCE_BUCKET settings!!!!!')
-#     NONCE_BUCKET = 'vwt-d-gew1-ns-surveys-nonce-stg'
-
 
 class Registration:
     """
@@ -248,7 +241,7 @@ def get_registrations_as_csv(survey_id):
     the registrations that have been downloaded
     """
     store_client = storage.Client()
-    nonce_bucket = store_client.get_bucket(NONCE_BUCKET)
+    nonce_bucket = store_client.get_bucket(config.NONCE_BUCKET)
     nonce = str(uuid.uuid4())
     nonce_blob = nonce_bucket.blob(f'{nonce}.csv')
     registration_instance = Registration(bucket=config.BUCKET)
@@ -278,7 +271,7 @@ def get_registrations_as_zip(survey_id):
     the registrations that have been downloaded
     """
     store_client = storage.Client()
-    nonce_bucket = store_client.get_bucket(NONCE_BUCKET)
+    nonce_bucket = store_client.get_bucket(config.NONCE_BUCKET)
     nonce = str(uuid.uuid4())
     nonce_blob = nonce_bucket.blob(f'{nonce}.zip')
     registration_instance = Registration(bucket=config.BUCKET)
@@ -352,7 +345,7 @@ def get_single_images_archive(survey_id, registration_id):
     :return:
     """
     store_client = storage.Client()
-    nonce_bucket = store_client.get_bucket(NONCE_BUCKET)
+    nonce_bucket = store_client.get_bucket(config.NONCE_BUCKET)
     nonce = str(uuid.uuid4())
     nonce_blob = nonce_bucket.blob(f'{nonce}.zip')
     logger.warn('Single image archive before generation')
@@ -396,7 +389,7 @@ def get_surveys_nonce(nonce):
         # delta = datetime.datetime.now() - downloads['created']
         # nonce_blob = nonce_bucket.blob(nonce)
         try:
-            return redirect(f'https://storage.cloud.google.com/{NONCE_BUCKET}/{downloads["blob_name"]}')
+            return redirect(f'https://storage.cloud.google.com/{config.NONCE_BUCKET}/{downloads["blob_name"]}')
             # if delta.seconds < 10:
             #     payload = nonce_blob.download_as_string()
             #     headers = downloads['headers']
@@ -408,7 +401,7 @@ def get_surveys_nonce(nonce):
             def cleanup():
                 time.sleep(15)
                 store_client = storage.Client()
-                nonce_bucket = store_client.get_bucket(NONCE_BUCKET)
+                nonce_bucket = store_client.get_bucket(config.NONCE_BUCKET)
                 nonce_bucket.delete_blob(downloads['blob_name'])
 
             threading.Thread(target=cleanup).start()
