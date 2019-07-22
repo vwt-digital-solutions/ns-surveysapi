@@ -21,12 +21,12 @@ from exceptions import AttachmentsNotFound, RegistrationsNotFound
 
 logger = logging.getLogger(__name__)
 
-if hasattr(config, 'NONCE_BUCKET'):
-    logger.error('All fine - found NONCE_BUCKET settings!!!!!')
-    NONCE_BUCKET = config.NONCE_BUCKET
-else:
-    logger.error('Something wrong with config - no NONCE_BUCKET settings!!!!!')
-    NONCE_BUCKET = 'vwt-d-gew1-ns-surveys-nonce-stg'
+# if hasattr(config, 'NONCE_BUCKET'):
+#     logger.error('All fine - found NONCE_BUCKET settings!!!!!')
+#     NONCE_BUCKET = config.NONCE_BUCKET
+# else:
+#     logger.error('Something wrong with config - no NONCE_BUCKET settings!!!!!')
+#     NONCE_BUCKET = 'vwt-d-gew1-ns-surveys-nonce-stg'
 
 
 class Registration:
