@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 if hasattr(config, 'NONCE_BUCKET'):
     NONCE_BUCKET = config.NONCE_BUCKET
 else:
+    logger.error('Something wrong with config - no NONCE_BUCKET settings!!!!!')
     NONCE_BUCKET = 'vwt-d-gew1-ns-surveys-nonce-stg'
 
 
@@ -394,7 +395,7 @@ def get_surveys_nonce(nonce):
         # delta = datetime.datetime.now() - downloads['created']
         # nonce_blob = nonce_bucket.blob(nonce)
         try:
-            return redirect(f'https://storage.cloud.google.com/vwt-d-gew1-ns-surveys-nonce-stg/{downloads["blob_name"]}')
+            return redirect(f'https://storage.cloud.google.com/{NONCE_BUCKET}/{downloads["blob_name"]}')
             # if delta.seconds < 10:
             #     payload = nonce_blob.download_as_string()
             #     headers = downloads['headers']
