@@ -156,7 +156,7 @@ def create_subforms(value, reference, survey, list_of_subforms):
     sub_forms_data_file.close()
 
 
-def create_zip_file(surveys):
+def create_zip_file(surveys, request_id):
     """
     Creates the zip file that gets downloaded exclusively data on request.
     And flatten sub question to a 2 dimensional data representation
@@ -171,9 +171,15 @@ def create_zip_file(surveys):
     => locationSearch.mast: 'x3srrR' ...
     => locationSearch.another.anotherList._tt667dsfs: 'fs56df64sd3' ...
     :param surveys:
+    :param: request_id
     :return:
     """
-    surveys_zip_location = f"{gettempdir()}/surveys.zip"
+    surveys_zip_directory = f'{gettempdir()}/{request_id}'
+    try:
+        os.mkdir(surveys_zip_directory)
+    except OSError:
+        pass
+    surveys_zip_location = f"{surveys_zip_directory}/surveys.zip"
     surveys_zip = zipfile.ZipFile(surveys_zip_location, "w")
     list_of_registrations = []
     list_of_subforms = []

@@ -1,18 +1,21 @@
 import json
 import logging
 import os
+import shutil
+import uuid
 import tempfile
 import zipfile
 import mimetypes
-
-import config
+import datetime
+import time
+import threading
 
 import config
 
 from flask import jsonify
-from flask import Response, send_file
+from flask import Response, send_file, redirect
 
-from google.cloud import storage
+from google.cloud import storage, datastore
 from settings import get_batch_registrations, create_csv_file, create_zip_file
 from exceptions import AttachmentsNotFound, RegistrationsNotFound
 
@@ -28,17 +31,18 @@ class Registration:
     def __init__(self, bucket=None, survey_id=None, serial_number=None):
         self.survey_id = survey_id
         self.serial_number = serial_number
+        self.request_id = uuid.uuid4()
 
-        self.registration_list = dict()
-        self.registrations = dict()
+        # self.registration_list = dict()
+        # self.registrations = dict()
 
         self.bucket = bucket
-        self.photos = []
+        # self.photos = []
 
-        self.storage_client = storage.Client()
-        self.storage = self.storage_client.get_bucket(self.bucket)
-        self.images = dict()
-        self.registrations_with_images = self.get_registration_with_image()
+        # self.storage_client = storage.Client()
+        # self.storage = self.storage_client.get_bucket(self.bucket)
+        # self.images = dict()
+        # self.registrations_with_images = self.get_registration_with_image()
 
     def get_registrations(self, prefix):
         """
@@ -51,20 +55,20 @@ class Registration:
             if batch['elements']:
                 for registration in batch['elements']:
                     registrations[registration["meta"]["serialNumber"]] = registration
-                self.registrations = registrations
-                return self.registrations
+                # self.registrations = registrations
+                return registrations
             else:
                 raise RegistrationsNotFound('Empty Folder', f'There are no registrations for this folder: {prefix}')
         except Exception as error:
-            return jsonify({error.message: error.error})
+            raise RegistrationsNotFound('Processing error', error)
 
     def get_csv(self, survey_id):
         """
         Return a csv file of all registrations
         :return:
         """
-        self.get_registrations(prefix=survey_id)
-        return create_csv_file(self.registrations)
+        registrations = self.get_registrations(prefix=survey_id)
+        return create_csv_file(registrations)
 
     def get_zip(self, survey_id):
         """
@@ -72,27 +76,27 @@ class Registration:
 
         :return:
         """
-        self.get_registrations(prefix=survey_id)
-        return create_zip_file(self.registrations)
+        registrations = self.get_registrations(prefix=survey_id)
+        return create_zip_file(registrations, self.request_id)
 
     def get_list(self, survey_id):
         """
         Get a list of all registrations meta information
         :return:
         """
-        self.get_registrations(prefix=survey_id)
+        registrations = self.get_registrations(prefix=survey_id)
         registration_list = {}
-        for key in self.registrations:
-            registration_list[self.registrations[key]['info']['formId']] = \
+        for key in registrations:
+            registration_list[registrations[key]['info']['formId']] = \
                 [dict(serial_number=k,
                       date_of_registration=int(v['meta']['registrationDate']),
                       site_location=v['data']['tMNLLocationID']['CITY'] if 'tMNLLocationID' in v[
                           'data'].keys() else '',
                       site_id=v['data']['siteID'] if 'siteID' in v['data'].keys() else
                       ''.join(n for n in v['info']['formName'] if n.isdigit())
-                      ) for k, v in self.registrations.items()]
+                      ) for k, v in registrations.items()]
 
-        self.registration_list = registration_list
+        # self.registration_list = registration_list
         return json.dumps(registration_list)
 
     def get_attachment_list(self, survey_id, registration_id):
@@ -102,43 +106,61 @@ class Registration:
         :param registration_id: An int value to represent which registration is in qtn e.g e213424jfsdkfh234
         :return:
         """
-        storage_client = self.storage_client
+        storage_client = storage.Client()
         bucket = storage_client.get_bucket(self.bucket)
         blobs = bucket.list_blobs(prefix=f'attachments/{survey_id}/{registration_id if registration_id else ""}')
         images = {}
         for blob in blobs:
             images[blob.name] = blob.content_type  # Future: Other detail neccessary for front end i.v.m type
 
-        try:
-            if images:
-                self.images = images
-                return jsonify(images)
-            else:
-                raise AttachmentsNotFound(
-                    'Not Found', f'There were no Registration images found matching the '
-                    f'following id: {survey_id} and registration id: {registration_id}')
-        except Exception as error:
-            return jsonify({error.message: error.error})
+        # try:
+        if images:
+            # self.images = images
+            return images
+        else:
+            raise AttachmentsNotFound(
+                'Not Found', f'There were no Registration images found matching the '
+                f'following id: {survey_id} and registration id: {registration_id}')
+        # except Exception as error:
+        #     return jsonify({error.message: error.error})
 
     def get_images(self, survey_id, registration_id):
         """
         Retrieves a list single image of a file to a temporary directory
         """
-        self.get_attachment_list(survey_id, registration_id)
-        storage_client = self.storage_client
+        images = self.get_attachment_list(survey_id, registration_id)
+        logger.warning(f'Images collection: {images}')
+        storage_client = storage.Client()
         bucket = storage_client.get_bucket(self.bucket)
 
-        for key, value in self.images.items():
+        location = f"{tempfile.gettempdir()}/images/{self.request_id}/{registration_id if registration_id else survey_id}/"
+        logger.warn(location)
+        try:
+            os.makedirs(location)
+        except FileExistsError:
+            pass
+
+        for key in images:
+            mime_type = images[key]
             blob = bucket.blob(key)
-            location = f"{tempfile.gettempdir()}/images/{registration_id if registration_id else survey_id}/"
-            try:
-                os.makedirs(location)
-            except FileExistsError:
-                pass
+            logger.warning(f'Downloading {blob.name} to {location}')
             blob.download_to_filename(
                 f'{location}/{survey_id}-{registration_id if registration_id else ""}-{blob.name.split("/")[-1]}'
-                f'{mimetypes.guess_extension(value)}'
+                f'{mimetypes.guess_extension(mime_type)}'
             )
+
+        return location
+
+    @staticmethod
+    def clean_images(location):
+        logger.warning(f'Cleanup {location}')
+        try:
+            # os.remove(f'{location}*/*')
+            # os.rmdir(f'{location}*')
+            # os.rmdir(location)
+            shutil.rmtree(location)
+        except OSError as e:
+            logger.error(f'Error: {e.filename} - {e.strerror}')
 
     @staticmethod
     def zip_image_dir(directory, zip_file_name):
@@ -164,11 +186,11 @@ class Registration:
         :param survey_id: A form or survey ID
         :return:
         """
-        self.get_images(survey_id, registration_id=False)
-        location = f"{tempfile.gettempdir()}/images/{survey_id}"
-        images_file = f"{tempfile.gettempdir()}/img-{survey_id}.zip"
+        location = self.get_images(survey_id, registration_id=False)
+        images_file = f"{tempfile.gettempdir()}/img-{self.request_id}.zip"
 
         self.zip_image_dir(location, images_file)
+        self.clean_images(location)
         return images_file
 
     def get_single_registration_images_archive(self, survey_id, registration_id):
@@ -176,11 +198,12 @@ class Registration:
         Download a Zip file archive for a single registration
         :return:
         """
-        self.get_images(survey_id, registration_id)
-        location = f"{tempfile.gettempdir()}/images/{registration_id}/"
-        images_file = f"{tempfile.gettempdir()}/img-{registration_id}.zip"
+        location = self.get_images(survey_id, registration_id)
+        images_file = f"{tempfile.gettempdir()}/{self.request_id}/img-{registration_id}.zip"
+        os.makedirs(os.path.dirname(images_file))
 
         self.zip_image_dir(location, images_file)
+        self.clean_images(location)
         return images_file
 
     def get_registration_with_image(self):
@@ -188,7 +211,9 @@ class Registration:
         Get a list of Registrations with an image saved in the storage
         :return:
         """
-        lst_blobs = self.storage.list_blobs(prefix='attachments/')
+        storage_client = storage.Client()
+        bucket = storage_client.get_bucket(self.bucket)
+        lst_blobs = bucket.list_blobs(prefix='attachments/')
         return list(set([blob.name.split('/')[1] for blob in lst_blobs]))
 
     def get_survey_forms_list(self):
@@ -203,14 +228,11 @@ class Registration:
             forms[key] = []
             for form in value:
                 forms[key].append(dict(survey_id=form['properties']['view_id'], name=form['properties']['label_text'],
-                                       has_images=form['properties']['view_id'] in self.registrations_with_images,
+                                       has_images=form['properties']['view_id'] in self.get_registration_with_image(),
                                        description_text=
                                        form['properties']['description_text']
                                        if 'description_text' in form['properties'].keys() else ''))
         return json.dumps(forms)
-
-
-registration_instance = Registration(bucket=config.BUCKET)
 
 
 def get_registrations_as_csv(survey_id):
@@ -218,14 +240,29 @@ def get_registrations_as_csv(survey_id):
     This aims to create a csv file from all
     the registrations that have been downloaded
     """
-    return Response(
-        registration_instance.get_csv(survey_id),
-        headers={
+    store_client = storage.Client()
+    nonce_bucket = store_client.get_bucket(config.NONCE_BUCKET)
+    nonce = str(uuid.uuid4())
+    nonce_blob = nonce_bucket.blob(f'{nonce}.csv')
+    registration_instance = Registration(bucket=config.BUCKET)
+    nonce_blob.upload_from_string(registration_instance.get_csv(survey_id), content_type="text/csv")
+    db_client = datastore.Client()
+    downloads_key = db_client.key('Downloads', nonce)
+    downloads = datastore.Entity(key=downloads_key)
+    downloads.update({
+        'created': datetime.datetime.now(),
+        'blob_name': f'{nonce}.csv',
+        'headers': {
             "Content-Type": "text/csv",
-            "Content-Disposition": 'attachment; filename="~/blobs.csv"',
-            "Authorization": ''
-        },
-    )
+            "Content-Disposition": 'attachment; filename="~/blobs.csv"'
+            # "Authorization": ''
+        }
+    })
+    db_client.put(downloads)
+    return Response(json.dumps({'nonce': downloads.key.id_or_name, "mime_type": "text/csv"}),
+                    headers={
+                        'Content-Type': 'application/json'
+                    })
 
 
 def get_registrations_as_zip(survey_id):
@@ -233,15 +270,32 @@ def get_registrations_as_zip(survey_id):
     This aims to create a csv zip file from all
     the registrations that have been downloaded
     """
-    try:
-        return send_file(
-            registration_instance.get_zip(survey_id),
-            mimetype='application/zip',
-            as_attachment=True,
-            attachment_filename='surveys.zip'
-        )
-    except Exception as e:
-        return jsonify({'Important': f'{e}'})
+    store_client = storage.Client()
+    nonce_bucket = store_client.get_bucket(config.NONCE_BUCKET)
+    nonce = str(uuid.uuid4())
+    nonce_blob = nonce_bucket.blob(f'{nonce}.zip')
+    registration_instance = Registration(bucket=config.BUCKET)
+    zip_file_name = registration_instance.get_zip(survey_id)
+    nonce_blob.upload_from_filename(zip_file_name, content_type="application/zip")
+    os.remove(zip_file_name)
+    os.removedirs(os.path.dirname(zip_file_name))
+    db_client = datastore.Client()
+    downloads_key = db_client.key('Downloads', nonce)
+    downloads = datastore.Entity(key=downloads_key)
+    downloads.update({
+        'created': datetime.datetime.utcnow(),
+        'blob_name': f'{nonce}.zip',
+        'headers': {
+            "Content-Type": "application/zip",
+            "Content-Disposition": 'attachment; filename="~/surveys.zip"'
+            # "Authorization": ''
+        }
+    })
+    db_client.put(downloads)
+    return Response(json.dumps({'nonce': downloads.key.id_or_name, "mime_type": "application/zip"}),
+                    headers={
+                        'Content-Type': 'application/json'
+                    })
 
 
 def get_registrations_list(survey_id):
@@ -249,6 +303,7 @@ def get_registrations_list(survey_id):
     Return a list of registrations
     :return:
     """
+    registration_instance = Registration(bucket=config.BUCKET)
     return Response(
         registration_instance.get_list(survey_id),
         headers={
@@ -262,6 +317,7 @@ def get_forms_list():
     Return a list of registrations
     :return:
     """
+    registration_instance = Registration(bucket=config.BUCKET)
     return Response(
         registration_instance.get_survey_forms_list(),
         headers={
@@ -277,6 +333,7 @@ def get_registrations_attachments(survey_id, registration_id):
     :param registration_id: An integer that represents a Registration e.g => 7
     :return:
     """
+    registration_instance = Registration(bucket=config.BUCKET)
     return registration_instance.get_attachment_list(survey_id, registration_id)
 
 
@@ -287,11 +344,64 @@ def get_single_images_archive(survey_id, registration_id):
     :param registration_id: An integer that represents a Registration e.g => 7
     :return:
     """
-    return Response(
-        open(registration_instance.get_single_registration_images_archive(survey_id, registration_id), 'rb').read(),
-        headers={
-            'Content-Type': "application/zip",
-            'Transfer-Encoding': 'chunked',
-            'Content-Disposition': f'attachment;filename=image-{survey_id}-{registration_id}.zip',
+    store_client = storage.Client()
+    nonce_bucket = store_client.get_bucket(config.NONCE_BUCKET)
+    nonce = str(uuid.uuid4())
+    nonce_blob = nonce_bucket.blob(f'{nonce}.zip')
+    logger.warn('Single image archive before generation')
+    registration_instance = Registration(bucket=config.BUCKET)
+    zip_filename = registration_instance.get_single_registration_images_archive(survey_id, registration_id)
+    nonce_blob.upload_from_filename(zip_filename, content_type="application/zip")
+    os.remove(zip_filename)
+    os.removedirs(os.path.dirname(zip_filename))
+    logger.warn('Single image archive generated')
+    db_client = datastore.Client()
+    downloads_key = db_client.key('Downloads', nonce)
+    downloads = datastore.Entity(key=downloads_key)
+    downloads.update({
+        'created': datetime.datetime.utcnow(),
+        'blob_name': f'{nonce}.zip',
+        'headers': {
+            "Content-Type": "application/zip",
+            "Content-Disposition":
+                f'attachment; filename="image-{survey_id}-{registration_id}.zip"'
+            # "Authorization": ''
         }
-    )
+    })
+    db_client.put(downloads)
+    logger.warn('SIngle image archive nonce stored')
+    return Response(json.dumps({'nonce': downloads.key.id_or_name, "mime_type": "application/json"}),
+                    headers={
+                        'Content-Type': 'application/json'
+                    })
+
+
+def get_surveys_nonce(nonce):
+    """
+    Perform actual download operation of already prepared data
+    :param nonce:
+    :return:
+    """
+    db_client = datastore.Client()
+    downloads_key = db_client.key('Downloads', nonce)
+    downloads = db_client.get(downloads_key)
+    if downloads:
+        # delta = datetime.datetime.now() - downloads['created']
+        # nonce_blob = nonce_bucket.blob(nonce)
+        try:
+            return redirect(f'https://storage.cloud.google.com/{config.NONCE_BUCKET}/{downloads["blob_name"]}')
+            # if delta.seconds < 10:
+            #     payload = nonce_blob.download_as_string()
+            #     headers = downloads['headers']
+            # else:
+            #     logger.error(f'Nonce too old {nonce}')
+        finally:
+            db_client.delete(downloads_key)
+
+            def cleanup():
+                time.sleep(15)
+                store_client = storage.Client()
+                nonce_bucket = store_client.get_bucket(config.NONCE_BUCKET)
+                nonce_bucket.delete_blob(downloads['blob_name'])
+
+            threading.Thread(target=cleanup).start()

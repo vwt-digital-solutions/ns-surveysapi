@@ -56,7 +56,6 @@ paths:
                 $ref: '#/components/schemas/zipFile'
         '404':
           description: Download Failed
-          
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
   /surveys/{survey_id}/registrations/csvfiles:
     get:
@@ -140,6 +139,23 @@ paths:
         '404':
           description: List Not Accessed
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
+  /surveys/{nonce}:
+    get:
+      description: Download previously requested information
+      operationId: get_surveys_nonce
+      parameters:
+        - $ref: '#/components/parameters/nonce'
+      responses:
+        '200':
+          description: download started
+          content:
+            application/zip:
+              schema:
+                $ref: '#/components/schemas/zipFile'
+            text/csv:
+              schema:
+                $ref: '#/components/schemas/csvFile'
+      x-openapi-router-controller: openapi_server.controllers.surveys_controller
 components:
   schemas:
     zipFile:
@@ -158,7 +174,6 @@ components:
       required: true
       schema:
         type: string
-        
     surveyId:
       name: survey_id
       in: path
@@ -166,7 +181,6 @@ components:
       required: true
       schema:
         type: string
-    
     registrationId:
       name: registration_id
       in: path
@@ -174,6 +188,14 @@ components:
       required: true
       schema:
         type: integer
+    nonce:
+      name: nonce
+      in: path
+      description: Unique download identifier
+      required: true
+      schema:
+        type: string
+        format: uuid
   securitySchemes:
     Surveys:
       type: oauth2
