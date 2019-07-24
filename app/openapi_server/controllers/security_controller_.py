@@ -2,6 +2,9 @@ import config
 import logging
 from jwkaas import JWKaas
 
+my_jwkaas = None
+my_e2e_jwkaas = None
+
 if hasattr(config, 'OAUTH_JWKS_URL'):
     my_jwkaas = JWKaas(config.OAUTH_EXPECTED_AUDIENCE,
                        config.OAUTH_EXPECTED_ISSUER,
