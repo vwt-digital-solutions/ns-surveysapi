@@ -227,8 +227,9 @@ def get_batch_registrations(bucket_name, prefix=None):
 
     bucket = storage_client.get_bucket(bucket_name)
 
-    latest = list(bucket.list_blobs(prefix=f'source/{prefix}/folders'))[
-        -1].download_as_string() if prefix == 'surveys' else \
-        list(bucket.list_blobs(prefix=f'source/registrations/{prefix}'))[-1].download_as_string()
-    logger.info("Downloaded Survey String", latest)
+    if prefix == 'surveys':
+        latest = list(bucket.list_blobs(prefix=f'source/{prefix}/folders'))[-1].download_as_string()
+    else:
+        latest = list(bucket.list_blobs(prefix=f'source/registrations/{prefix}'))[-1].download_as_string()
+
     return json.loads(latest)

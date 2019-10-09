@@ -1,6 +1,7 @@
 import config
 import logging
 from jwkaas import JWKaas
+from flask import g
 
 my_jwkaas = None
 my_e2e_jwkaas = None
