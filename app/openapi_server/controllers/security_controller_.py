@@ -1,6 +1,7 @@
 import config
 import logging
 from jwkaas import JWKaas
+from flask import g
 
 my_jwkaas = None
 my_e2e_jwkaas = None
@@ -42,6 +43,9 @@ def info_from_OAuth2AzureAD(token):
         token_info = my_e2e_jwkaas.get_connexion_token_info(token)
         if token_info and 'appid' in token_info and token_info['appid'] == config.OAUTH_E2E_APPID:
             logging.warning(f"Using e2e access token for appid {token_info['appid']}")
-            intermediate_token = {'scopes': ['surveys.read'], 'sub': 'e2e'}
+            intermediate_token = {'scopes': ['surveys.read'], 'sub': 'e2e', 'upn': 'e2e-technical-user'}
+
+    if intermediate_token.get is not None:
+        g.user = intermediate_token.get('upn', '')
 
     return refine_token_info(intermediate_token)

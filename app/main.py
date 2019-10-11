@@ -1,4 +1,8 @@
+import logging
+
 import connexion
+from Flask_AuditLog import AuditLog
+from Flask_No_Cache import CacheControl
 from flask_cors import CORS
 
 app = connexion.App(__name__, specification_dir='./openapi_server/openapi/')
@@ -7,5 +11,11 @@ app.add_api('openapi.yaml',
             pythonic_params=True)
 CORS(app.app)
 
+logging.basicConfig(level=logging.INFO)
+
+AuditLog(app)
+CacheControl(app)
+
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=8080)
+
