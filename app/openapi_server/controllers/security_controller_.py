@@ -46,6 +46,7 @@ def info_from_OAuth2AzureAD(token):
             intermediate_token = {'scopes': ['surveys.read'], 'sub': 'e2e', 'upn': 'e2e-technical-user'}
 
     if intermediate_token.get is not None:
-        g.user = intermediate_token.get('upn', '')
+        g.user = intermediate_token.get('upn', 'e2e-technical-user')
+        g.token = intermediate_token
 
     return refine_token_info(intermediate_token)
