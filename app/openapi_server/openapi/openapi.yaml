@@ -37,7 +37,6 @@ paths:
         '404':
           description: Download Failed
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-    x-eac-ignore: True
   /surveys/{survey_id}/registrations/{registration_id}/images/archives:
     get:
       summary: Download a single of registrations image folder as a zip archive
@@ -58,7 +57,6 @@ paths:
         '404':
           description: Download Failed
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-    x-eac-ignore: True
   /surveys/{survey_id}/registrations/csvfiles:
     get:
       summary: Retrieve a csv file
@@ -80,7 +78,6 @@ paths:
         '403':
           description: Access token does not have the required scope
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-    x-eac-ignore: True
   /surveys/{survey_id}/registrations/archives:
     get:
       summary: Retrieve a zip file
@@ -102,7 +99,6 @@ paths:
         '403':
           description: Access token does not have the required scope
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-    x-eac-ignore: True
   /surveys/{survey_id}/registrations:
     get:
       summary: Get a list of available registrations
@@ -125,7 +121,6 @@ paths:
           description: List Not Accessed
           
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-    x-eac-ignore: True
   /surveys:
     get:
       description: Get all forms available
@@ -161,7 +156,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/csvFile'
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-    x-eac-ignore: True
 components:
   schemas:
     zipFile:
