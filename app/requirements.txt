@@ -12,3 +12,4 @@ flask_cors == 3.0.7
 jwkaas == 0.3
 Flask-AuditLog==1.0
 Flask-No-Cache==1.0
+Flask-SSLify==0.1.5
