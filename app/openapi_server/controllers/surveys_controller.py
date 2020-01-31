@@ -191,15 +191,15 @@ class Registration:
         self.clean_images(location)
         return images_file
 
-    def get_registration_with_image(self):
+    def has_registration_images(self, view_id):
         """
         Get a list of Registrations with an image saved in the storage
         :return:
         """
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(self.bucket)
-        lst_blobs = bucket.list_blobs(prefix='attachments/')
-        return list(set([blob.name.split('/')[1] for blob in lst_blobs]))
+        list_blobs = list(storage_client.list_blobs(bucket, prefix=f'attachments/{view_id}', max_results=1))
+        return True if list_blobs else False
 
     def get_survey_forms_list(self):
         """
@@ -213,7 +213,7 @@ class Registration:
             forms[key] = []
             for form in value:
                 forms[key].append(dict(survey_id=form['properties']['view_id'], name=form['properties']['label_text'],
-                                       has_images=form['properties']['view_id'] in self.get_registration_with_image(),
+                                       has_images=self.has_registration_images(form['properties']['view_id']),
                                        description_text=form['properties']['description_text']
                                        if 'description_text' in form['properties'].keys() else ''))
         return json.dumps(forms)
