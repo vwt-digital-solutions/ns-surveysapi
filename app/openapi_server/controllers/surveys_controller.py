@@ -12,8 +12,7 @@ import threading
 
 import config
 
-from flask import jsonify
-from flask import Response, send_file, redirect
+from flask import Response, redirect
 
 from google.cloud import storage, datastore
 from settings import get_batch_registrations, create_csv_file, create_zip_file
@@ -33,16 +32,7 @@ class Registration:
         self.serial_number = serial_number
         self.request_id = uuid.uuid4()
 
-        # self.registration_list = dict()
-        # self.registrations = dict()
-
         self.bucket = bucket
-        # self.photos = []
-
-        # self.storage_client = storage.Client()
-        # self.storage = self.storage_client.get_bucket(self.bucket)
-        # self.images = dict()
-        # self.registrations_with_images = self.get_registration_with_image()
 
     def get_registrations(self, prefix):
         """
@@ -121,8 +111,6 @@ class Registration:
             raise AttachmentsNotFound(
                 'Not Found', f'There were no Registration images found matching the '
                 f'following id: {survey_id} and registration id: {registration_id}')
-        # except Exception as error:
-        #     return jsonify({error.message: error.error})
 
     def get_images(self, survey_id, registration_id):
         """
@@ -134,7 +122,7 @@ class Registration:
         bucket = storage_client.get_bucket(self.bucket)
 
         location = f"{tempfile.gettempdir()}/images/{self.request_id}/{registration_id if registration_id else survey_id}/"
-        logger.warn(location)
+        logger.warning(location)
         try:
             os.makedirs(location)
         except FileExistsError:
@@ -155,9 +143,6 @@ class Registration:
     def clean_images(location):
         logger.warning(f'Cleanup {location}')
         try:
-            # os.remove(f'{location}*/*')
-            # os.rmdir(f'{location}*')
-            # os.rmdir(location)
             shutil.rmtree(location)
         except OSError as e:
             logger.error(f'Error: {e.filename} - {e.strerror}')
@@ -206,15 +191,15 @@ class Registration:
         self.clean_images(location)
         return images_file
 
-    def get_registration_with_image(self):
+    def has_registration_images(self, view_id):
         """
         Get a list of Registrations with an image saved in the storage
         :return:
         """
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(self.bucket)
-        lst_blobs = bucket.list_blobs(prefix='attachments/')
-        return list(set([blob.name.split('/')[1] for blob in lst_blobs]))
+        list_blobs = list(storage_client.list_blobs(bucket, prefix=f'attachments/{view_id}', max_results=1))
+        return True if list_blobs else False
 
     def get_survey_forms_list(self):
         """
@@ -228,9 +213,8 @@ class Registration:
             forms[key] = []
             for form in value:
                 forms[key].append(dict(survey_id=form['properties']['view_id'], name=form['properties']['label_text'],
-                                       has_images=form['properties']['view_id'] in self.get_registration_with_image(),
-                                       description_text=
-                                       form['properties']['description_text']
+                                       has_images=self.has_registration_images(form['properties']['view_id']),
+                                       description_text=form['properties']['description_text']
                                        if 'description_text' in form['properties'].keys() else ''))
         return json.dumps(forms)
 
@@ -255,7 +239,6 @@ def get_registrations_as_csv(survey_id):
         'headers': {
             "Content-Type": "text/csv",
             "Content-Disposition": 'attachment; filename="~/blobs.csv"'
-            # "Authorization": ''
         }
     })
     db_client.put(downloads)
@@ -288,7 +271,6 @@ def get_registrations_as_zip(survey_id):
         'headers': {
             "Content-Type": "application/zip",
             "Content-Disposition": 'attachment; filename="~/surveys.zip"'
-            # "Authorization": ''
         }
     })
     db_client.put(downloads)
@@ -348,13 +330,13 @@ def get_single_images_archive(survey_id, registration_id):
     nonce_bucket = store_client.get_bucket(config.NONCE_BUCKET)
     nonce = str(uuid.uuid4())
     nonce_blob = nonce_bucket.blob(f'{nonce}.zip')
-    logger.warn('Single image archive before generation')
+    logger.warning('Single image archive before generation')
     registration_instance = Registration(bucket=config.BUCKET)
     zip_filename = registration_instance.get_single_registration_images_archive(survey_id, registration_id)
     nonce_blob.upload_from_filename(zip_filename, content_type="application/zip")
     os.remove(zip_filename)
     os.removedirs(os.path.dirname(zip_filename))
-    logger.warn('Single image archive generated')
+    logger.warning('Single image archive generated')
     db_client = datastore.Client()
     downloads_key = db_client.key('Downloads', nonce)
     downloads = datastore.Entity(key=downloads_key)
@@ -365,11 +347,10 @@ def get_single_images_archive(survey_id, registration_id):
             "Content-Type": "application/zip",
             "Content-Disposition":
                 f'attachment; filename="image-{survey_id}-{registration_id}.zip"'
-            # "Authorization": ''
         }
     })
     db_client.put(downloads)
-    logger.warn('SIngle image archive nonce stored')
+    logger.warning('Single image archive nonce stored')
     return Response(json.dumps({'nonce': downloads.key.id_or_name, "mime_type": "application/json"}),
                     headers={
                         'Content-Type': 'application/json'
@@ -386,15 +367,8 @@ def get_surveys_nonce(nonce):
     downloads_key = db_client.key('Downloads', nonce)
     downloads = db_client.get(downloads_key)
     if downloads:
-        # delta = datetime.datetime.now() - downloads['created']
-        # nonce_blob = nonce_bucket.blob(nonce)
         try:
             return redirect(f'https://storage.googleapis.com/{config.NONCE_BUCKET}/{downloads["blob_name"]}')
-            # if delta.seconds < 10:
-            #     payload = nonce_blob.download_as_string()
-            #     headers = downloads['headers']
-            # else:
-            #     logger.error(f'Nonce too old {nonce}')
         finally:
             db_client.delete(downloads_key)
 
