@@ -1,4 +1,3 @@
-import itertools
 import os
 import logging
 import re
@@ -15,6 +14,7 @@ from google.cloud import storage
 logger = logging.getLogger(__name__)
 
 CSV_DELIMITER = ';'
+
 
 def get_label(key, value):
     """
@@ -85,7 +85,7 @@ def create_csv_file(surveys):
         list_of_registrations.append(data)
 
     df = pd.io.json.json_normalize(list_of_registrations, sep=".")
-    return df.to_csv(sep = CSV_DELIMITER)
+    return df.to_csv(sep=CSV_DELIMITER)
 
 
 def create_subforms(value, reference, survey, list_of_subforms):
@@ -119,41 +119,42 @@ def create_subforms(value, reference, survey, list_of_subforms):
         else:
             toadd_data.update({key: value})
 
-    toadd_data = pd.io.json.json_normalize(toadd_data).to_dict(orient='records')[0]
-    toadd_field_names = list(toadd_data.keys())
+    if toadd_data:
+        toadd_data = pd.io.json.json_normalize(toadd_data).to_dict(orient='records')[0]
+        toadd_field_names = list(toadd_data.keys())
 
-    # Serial number on first column
-    toadd_field_names = ['serialNumber', *toadd_field_names]
-    toadd_data = {'serialNumber': survey, **toadd_data}
+        # Serial number on first column
+        toadd_field_names = ['serialNumber', *toadd_field_names]
+        toadd_data = {'serialNumber': survey, **toadd_data}
 
-    should_write_header = False
+        should_write_header = False
 
-    if reference in list_of_subforms:
-        # Read header to check headers are the same
-        previous_reader = csv.DictReader(open(f'{gettempdir()}/{reference}.header.csv', "r"), delimiter=CSV_DELIMITER)
-        combined_field_names = [*previous_reader.fieldnames]
+        if reference in list_of_subforms:
+            # Read header to check headers are the same
+            previous_reader = csv.DictReader(open(f'{gettempdir()}/{reference}.header.csv', "r"), delimiter=CSV_DELIMITER)
+            combined_field_names = [*previous_reader.fieldnames]
 
-        for toadd_field_name in toadd_field_names:
-            if toadd_field_name not in combined_field_names:
-                combined_field_names.append(toadd_field_name)
-                should_write_header = True
-        sub_forms_data_file = open(f"{gettempdir()}/{reference}.data.csv", "a")
-    else:
-        combined_field_names = toadd_field_names
-        sub_forms_data_file = open(f"{gettempdir()}/{reference}.data.csv", "w")
-        list_of_subforms.append(reference)
-        should_write_header = True
+            for toadd_field_name in toadd_field_names:
+                if toadd_field_name not in combined_field_names:
+                    combined_field_names.append(toadd_field_name)
+                    should_write_header = True
+            sub_forms_data_file = open(f"{gettempdir()}/{reference}.data.csv", "a")
+        else:
+            combined_field_names = toadd_field_names
+            sub_forms_data_file = open(f"{gettempdir()}/{reference}.data.csv", "w")
+            list_of_subforms.append(reference)
+            should_write_header = True
 
-    if should_write_header:
-        # (Re)write header
-        header_writer = csv.DictWriter(open(f'{gettempdir()}/{reference}.header.csv', "w"), fieldnames=combined_field_names,
-                                      delimiter=CSV_DELIMITER)
-        header_writer.writeheader()
+        if should_write_header:
+            # (Re)write header
+            header_writer = csv.DictWriter(open(f'{gettempdir()}/{reference}.header.csv', "w"),
+                                           fieldnames=combined_field_names, delimiter=CSV_DELIMITER)
+            header_writer.writeheader()
 
-    # Add content to CSV and file to list of sub forms
-    writer = csv.DictWriter(sub_forms_data_file, fieldnames=combined_field_names, delimiter=CSV_DELIMITER)
-    writer.writerow(toadd_data)
-    sub_forms_data_file.close()
+        # Add content to CSV and file to list of sub forms
+        writer = csv.DictWriter(sub_forms_data_file, fieldnames=combined_field_names, delimiter=CSV_DELIMITER)
+        writer.writerow(toadd_data)
+        sub_forms_data_file.close()
 
 
 def create_zip_file(surveys, request_id):
