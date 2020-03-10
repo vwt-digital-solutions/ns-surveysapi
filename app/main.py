@@ -1,5 +1,8 @@
 import logging
 import os
+
+import config
+
 import connexion
 from Flask_AuditLog import AuditLog
 from Flask_No_Cache import CacheControl
@@ -10,7 +13,10 @@ app = connexion.App(__name__, specification_dir='./openapi_server/openapi/')
 app.add_api('openapi.yaml',
             arguments={'title': 'nssurveyapi'},
             pythonic_params=True)
-CORS(app.app)
+if 'GAE_INSTANCE' in os.environ:
+    CORS(app.app, origins=config.ORIGINS)
+else:
+    CORS(app.app)
 
 logging.basicConfig(level=logging.INFO)
 
