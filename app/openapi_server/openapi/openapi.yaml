@@ -1,3 +1,4 @@
+---
 openapi: 3.0.1
 x-zally-ignore: [105, 104, 101]
 info:
@@ -81,6 +82,8 @@ paths:
           description: Not authenticated
         '403':
           description: Access token does not have the required scope
+        '404':
+          description: Not found
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
     x-eac-ignore: True
   /surveys/{survey_id}/registrations/archives:
@@ -103,6 +106,8 @@ paths:
           description: Not authenticated
         '403':
           description: Access token does not have the required scope
+        '404':
+          description: Not found
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
     x-eac-ignore: True
   /surveys/{survey_id}/registrations:
@@ -125,7 +130,6 @@ paths:
                     6989e703805147659fb50edea7792c79: 6
         '404':
           description: List Not Accessed
-          
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
     x-eac-ignore: True
   /surveys:
@@ -163,6 +167,8 @@ paths:
             text/csv:
               schema:
                 $ref: '#/components/schemas/csvFile'
+        '404':
+          description: Not found
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
     x-eac-ignore: True
 components:
