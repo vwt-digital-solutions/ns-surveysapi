@@ -28,4 +28,4 @@ def get_token():
 class TestvAPI(BaseTestCase):
 
     def test_fuzzing(self):
-        FuzzIt("../openapi/openapi.yaml", get_token(), self)
+        FuzzIt("openapi_server/openapi/openapi.yaml", get_token(), self)
