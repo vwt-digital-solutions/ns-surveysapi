@@ -11,11 +11,10 @@ if hasattr(config, 'OAUTH_JWKS_URL'):
                        config.OAUTH_EXPECTED_ISSUER,
                        jwks_url=config.OAUTH_JWKS_URL)
 
-
 if hasattr(config, 'OAUTH_E2E_JWKS_URL'):
     my_e2e_jwkaas = JWKaas(config.OAUTH_E2E_EXPECTED_AUDIENCE,
-                       config.OAUTH_E2E_EXPECTED_ISSUER,
-                       jwks_url=config.OAUTH_E2E_JWKS_URL)
+                           config.OAUTH_E2E_EXPECTED_ISSUER,
+                           jwks_url=config.OAUTH_E2E_JWKS_URL)
 
 
 def refine_token_info(token_info):

@@ -236,4 +236,3 @@ def get_batch_registrations(bucket_name, prefix=None):
         return json.loads(latest)
     except IndexError:
         return None
-

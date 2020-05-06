@@ -40,7 +40,7 @@ paths:
         '404':
           description: Download Failed
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-    x-eac-ignore: True
+    x-eac-ignore: true
   /surveys/{survey_id}/registrations/{registration_id}/images/archives:
     get:
       summary: Download a single of registrations image folder as a zip archive
@@ -61,7 +61,7 @@ paths:
         '404':
           description: Download Failed
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-    x-eac-ignore: True
+    x-eac-ignore: true
   /surveys/{survey_id}/registrations/csvfiles:
     get:
       summary: Retrieve a csv file
@@ -85,7 +85,7 @@ paths:
         '404':
           description: Not found
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-    x-eac-ignore: True
+    x-eac-ignore: true
   /surveys/{survey_id}/registrations/archives:
     get:
       summary: Retrieve a zip file
@@ -109,7 +109,7 @@ paths:
         '404':
           description: Not found
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-    x-eac-ignore: True
+    x-eac-ignore: true
   /surveys/{survey_id}/registrations:
     get:
       summary: Get a list of available registrations
@@ -131,7 +131,7 @@ paths:
         '404':
           description: List Not Accessed
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-    x-eac-ignore: True
+    x-eac-ignore: true
   /surveys:
     get:
       description: Get all forms available
@@ -150,7 +150,7 @@ paths:
         '404':
           description: List Not Accessed
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-    x-eac-ignore: True
+    x-eac-ignore: true
   /surveys/{nonce}:
     get:
       description: Download previously requested information
@@ -170,7 +170,7 @@ paths:
         '404':
           description: Not found
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-    x-eac-ignore: True
+    x-eac-ignore: true
 components:
   schemas:
     zipFile:
