@@ -12,11 +12,10 @@ import threading
 
 import config
 
-from flask import Response, redirect
+from flask import Response, redirect, abort
 
 from google.cloud import storage, datastore
 from settings import get_batch_registrations, create_csv_file, create_zip_file
-from exceptions import AttachmentsNotFound, RegistrationsNotFound
 
 logger = logging.getLogger(__name__)
 
@@ -39,18 +38,15 @@ class Registration:
         Get all registrations
         :return:
         """
-        batch = get_batch_registrations(self.bucket, prefix)
         registrations = {}
-        try:
-            if batch['elements']:
-                for registration in batch['elements']:
-                    registrations[registration["meta"]["serialNumber"]] = registration
-                # self.registrations = registrations
-                return registrations
-            else:
-                raise RegistrationsNotFound('Empty Folder', f'There are no registrations for this folder: {prefix}')
-        except Exception as error:
-            raise RegistrationsNotFound('Processing error', error)
+        batch = get_batch_registrations(self.bucket, prefix)
+        if batch and batch['elements']:
+            for registration in batch['elements']:
+                registrations[registration["meta"]["serialNumber"]] = registration
+            # self.registrations = registrations
+            return registrations
+        else:
+            abort(Response(status=404, response=f"No registrations found using: {prefix}"))
 
     def get_csv(self, survey_id):
         """
@@ -103,14 +99,11 @@ class Registration:
         for blob in blobs:
             images[blob.name] = blob.content_type  # Future: Other detail neccessary for front end i.v.m type
 
-        # try:
         if images:
             # self.images = images
             return images
         else:
-            raise AttachmentsNotFound(
-                'Not Found', f'There were no Registration images found matching the '
-                f'following id: {survey_id} and registration id: {registration_id}')
+            abort(Response(status=404, response=f"No registrations found using: {survey_id} and {registration_id}"))
 
     def get_images(self, survey_id, registration_id):
         """
@@ -198,7 +191,7 @@ class Registration:
         """
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(self.bucket)
-        list_blobs = list(storage_client.list_blobs(bucket, prefix=f'attachments/{view_id}', max_results=1))
+        list_blobs = list(bucket.list_blobs(prefix=f'attachments/{view_id}', max_results=1))
         return True if list_blobs else False
 
     def get_survey_forms_list(self):
@@ -208,6 +201,9 @@ class Registration:
         """
         forms_list = get_batch_registrations(self.bucket, 'surveys')
         forms = {}
+
+        if not forms_list:
+            abort(Response(status=404, response="No registrations found"))
 
         for key, value in forms_list.items():
             forms[key] = []

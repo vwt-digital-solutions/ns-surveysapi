@@ -1,3 +1,4 @@
+---
 openapi: 3.0.1
 x-zally-ignore: [105, 104, 101]
 info:
@@ -39,7 +40,7 @@ paths:
         '404':
           description: Download Failed
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-    x-eac-ignore: True
+    x-eac-ignore: true
   /surveys/{survey_id}/registrations/{registration_id}/images/archives:
     get:
       summary: Download a single of registrations image folder as a zip archive
@@ -60,7 +61,7 @@ paths:
         '404':
           description: Download Failed
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-    x-eac-ignore: True
+    x-eac-ignore: true
   /surveys/{survey_id}/registrations/csvfiles:
     get:
       summary: Retrieve a csv file
@@ -81,8 +82,10 @@ paths:
           description: Not authenticated
         '403':
           description: Access token does not have the required scope
+        '404':
+          description: Not found
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-    x-eac-ignore: True
+    x-eac-ignore: true
   /surveys/{survey_id}/registrations/archives:
     get:
       summary: Retrieve a zip file
@@ -103,8 +106,10 @@ paths:
           description: Not authenticated
         '403':
           description: Access token does not have the required scope
+        '404':
+          description: Not found
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-    x-eac-ignore: True
+    x-eac-ignore: true
   /surveys/{survey_id}/registrations:
     get:
       summary: Get a list of available registrations
@@ -125,9 +130,8 @@ paths:
                     6989e703805147659fb50edea7792c79: 6
         '404':
           description: List Not Accessed
-          
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-    x-eac-ignore: True
+    x-eac-ignore: true
   /surveys:
     get:
       description: Get all forms available
@@ -146,7 +150,7 @@ paths:
         '404':
           description: List Not Accessed
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-    x-eac-ignore: True
+    x-eac-ignore: true
   /surveys/{nonce}:
     get:
       description: Download previously requested information
@@ -163,8 +167,10 @@ paths:
             text/csv:
               schema:
                 $ref: '#/components/schemas/csvFile'
+        '404':
+          description: Not found
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
-    x-eac-ignore: True
+    x-eac-ignore: true
 components:
   schemas:
     zipFile:
