@@ -1,0 +1,5 @@
+[flake8]
+exclude = 
+	app/openapi_server/controllers/security_controller_.py
+	app/settings/__init__.py
+	app/openapi_server/controllers/surveys_controller.py
