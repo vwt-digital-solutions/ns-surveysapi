@@ -208,7 +208,7 @@ class Registration:
         for key, value in forms_list.items():
             forms[key] = []
             for form in value:
-                forms[key].append(dict(survey_id=form['meta']['id'], name=form['meta']['name'],
+                forms[key].append(dict(survey_id=form['id'], name=form['meta']['name'],
                                        has_images=self.has_registration_images(form['meta']['id']),
                                        description_text=form['meta'].get('description', '')))
         return json.dumps(forms)
