@@ -5,6 +5,7 @@ Flask-Cors==3.0.7
 Flask-No-Cache==1.0
 Flask-SSLify==0.1.5
 jwkaas==0.7
+google-api-core==1.16.0
 google-cloud-core==1.3.0
 google-cloud-datastore==1.10.0
 google-cloud-storage==1.26.0
