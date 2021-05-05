@@ -55,5 +55,5 @@ strict-rfc3339==0.7
 swagger-ui-bundle==0.0.8
 typing-extensions==3.7.4.3
 typing-inspect==0.6.0
-urllib3==1.26.3
+urllib3==1.26.4
 Werkzeug==0.16.1
