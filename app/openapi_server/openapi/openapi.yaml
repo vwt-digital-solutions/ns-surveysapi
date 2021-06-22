@@ -37,6 +37,8 @@ paths:
                   value:
                     6989e7038051475cd2c9f3236f4c0001957e1a: >-
                       [ 3, 4, 5]
+        '204':
+          description: No Content
         '404':
           description: Download Failed
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
@@ -58,6 +60,8 @@ paths:
             application/zip:
               schema:
                 $ref: '#/components/schemas/zipFile'
+        '204':
+          description: No Content
         '404':
           description: Download Failed
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
@@ -78,6 +82,8 @@ paths:
             text/csv:
               schema:
                 $ref: '#/components/schemas/csvFile'
+        '204':
+          description: No Content
         '401':
           description: Not authenticated
         '403':
@@ -102,6 +108,8 @@ paths:
             application/zip:
               schema:
                 $ref: '#/components/schemas/zipFile'
+        '204':
+          description: No Content
         '401':
           description: Not authenticated
         '403':
@@ -128,6 +136,8 @@ paths:
                 registrations:
                   value:
                     6989e703805147659fb50edea7792c79: 6
+        '204':
+          description: No Content
         '404':
           description: List Not Accessed
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
@@ -147,6 +157,8 @@ paths:
                 registrations:
                   value:
                     6989e703805147659fb50edea7792c79: 6
+        '204':
+          description: No Content
         '404':
           description: List Not Accessed
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
@@ -167,6 +179,8 @@ paths:
             text/csv:
               schema:
                 $ref: '#/components/schemas/csvFile'
+        '204':
+          description: No Content
         '404':
           description: Not found
       x-openapi-router-controller: openapi_server.controllers.surveys_controller
