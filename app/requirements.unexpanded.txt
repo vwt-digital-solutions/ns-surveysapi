@@ -12,7 +12,7 @@ grpcio==1.37.1
 gunicorn==20.1.0
 jsonschema==3.2.0
 jwkaas==1.0.1
-numpy==1.20.2
+numpy==1.22.0
 pandas==1.2.4
 swagger-ui-bundle==0.0.8
 Werkzeug==1.0.1
